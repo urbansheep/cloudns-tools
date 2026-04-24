@@ -44,6 +44,20 @@ test("zone list paginates and emits json", async () => {
   assert.match(result.requests[1].stdin, /page=2/);
 });
 
+test("zone list accepts the short format flag", async () => {
+  const result = await runCli(["zone", "list", "-f", "json"], {
+    responses: [{ body: '{"one.com":{"name":"one.com"}}' }],
+  });
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    action: "zone list",
+    status: "ok",
+    recordsAffected: 1,
+    data: [{ name: "one.com" }],
+  });
+});
+
 test("zone list plain output includes zone names", async () => {
   const result = await runCli(["zone", "list"], {
     responses: [{ body: '{"one.com":{"name":"one.com"},"two.com":{"name":"two.com"}}' }],
@@ -53,6 +67,29 @@ test("zone list plain output includes zone names", async () => {
   assert.match(result.stdout, /^✓ zone list · 2 zones · ok\n/m);
   assert.match(result.stdout, /- one\.com/);
   assert.match(result.stdout, /- two\.com/);
+});
+
+test("zone list works with direct transport", async () => {
+  const result = await runCli(["zone", "list"], {
+    envText: directEnv(),
+    responses: [{ body: '{"one.com":{"name":"one.com"}}' }],
+  });
+
+  assert.equal(result.code, 0);
+  assert.match(result.stdout, /^✓ zone list · 1 zones · ok\n/m);
+  assert.equal(result.requests.length, 2);
+  assert.match(result.requests[0].args, /https:\/\/api\.cloudns\.net\/dns\/list-zones\.json/);
+});
+
+test("zone list reports direct transport failures as transport errors", async () => {
+  const result = await runCli(["zone", "list"], {
+    envText: directEnv(),
+    responses: [{ exitCode: 7, stderr: "curl: (7) failed" }],
+  });
+
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "✗ api · 0 records affected · Direct transport failed\n");
+  assert.equal(result.stderr, "");
 });
 
 test("zone add skips existing zones", async () => {
@@ -117,6 +154,21 @@ test("record add sends record-type, host, record, and ttl", async () => {
   assert.match(result.requests[1].stdin, /host=www/);
   assert.match(result.requests[1].stdin, /record=192.0.2.2/);
   assert.match(result.requests[1].stdin, /ttl=3600/);
+});
+
+test("record add accepts short aliases for transport and record flags", async () => {
+  const result = await runCli(
+    ["record", "add", "one.com", "-t", "ssh", "-T", "A", "-N", "www", "-V", "192.0.2.2"],
+    {
+      responses: [{ body: "{}" }, { body: '{"status":"Success","data":{"id":"11"}}' }],
+    },
+  );
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "✓ record add · 1 records affected · ok\n");
+  assert.match(result.requests[1].stdin, /record-type=A/);
+  assert.match(result.requests[1].stdin, /host=www/);
+  assert.match(result.requests[1].stdin, /record=192.0.2.2/);
 });
 
 test("record list plain output includes record rows", async () => {
@@ -530,24 +582,14 @@ async function runCli(args, { responses = [], files = {}, envText = validEnv() }
   await writeFile(requestsPath, "");
   await writeFile(
     join(fakeBin, "ssh"),
-    [
-      "#!/usr/bin/env node",
-      "const fs = require('node:fs');",
-      "const responsesPath = process.env.CLOUDNS_TEST_RESPONSES;",
-      "const requestsPath = process.env.CLOUDNS_TEST_REQUESTS;",
-      "const responses = JSON.parse(fs.readFileSync(responsesPath, 'utf8'));",
-      "const stdin = fs.readFileSync(0, 'utf8');",
-      "fs.appendFileSync(requestsPath, JSON.stringify({ args: process.argv.slice(2).join('\\n'), stdin }) + '\\n');",
-      "const response = responses.shift() || { body: '{}' };",
-      "fs.writeFileSync(responsesPath, JSON.stringify(responses));",
-      "if (response.exitCode) { if (response.stderr) process.stderr.write(response.stderr); process.exit(response.exitCode); }",
-      "if (response.raw) { process.stdout.write(response.body); process.stdout.write('\\n__CLOUDNS_HTTP_STATUS__:' + (response.httpStatus ?? 200) + '\\n'); process.exit(0); }",
-      "process.stdout.write(response.body);",
-      "process.stdout.write('\\n__CLOUDNS_HTTP_STATUS__:' + (response.httpStatus ?? 200) + '\\n');",
-      "",
-    ].join("\n"),
+    createFakeTransportScript(),
   );
   await chmod(join(fakeBin, "ssh"), 0o755);
+  await writeFile(
+    join(fakeBin, "curl"),
+    createFakeTransportScript(),
+  );
+  await chmod(join(fakeBin, "curl"), 0o755);
 
   const env = {
     ...process.env,
@@ -574,6 +616,25 @@ async function runCli(args, { responses = [], files = {}, envText = validEnv() }
   }
 }
 
+function createFakeTransportScript() {
+  return [
+    "#!/usr/bin/env node",
+    "const fs = require('node:fs');",
+    "const responsesPath = process.env.CLOUDNS_TEST_RESPONSES;",
+    "const requestsPath = process.env.CLOUDNS_TEST_REQUESTS;",
+    "const responses = JSON.parse(fs.readFileSync(responsesPath, 'utf8'));",
+    "const stdin = fs.readFileSync(0, 'utf8');",
+    "fs.appendFileSync(requestsPath, JSON.stringify({ args: process.argv.slice(2).join('\\n'), stdin }) + '\\n');",
+    "const response = responses.shift() || { body: '{}' };",
+    "fs.writeFileSync(responsesPath, JSON.stringify(responses));",
+    "if (response.exitCode) { if (response.stderr) process.stderr.write(response.stderr); process.exit(response.exitCode); }",
+    "if (response.raw) { process.stdout.write(response.body); process.stdout.write('\\n__CLOUDNS_HTTP_STATUS__:' + (response.httpStatus ?? 200) + '\\n'); process.exit(0); }",
+    "process.stdout.write(response.body);",
+    "process.stdout.write('\\n__CLOUDNS_HTTP_STATUS__:' + (response.httpStatus ?? 200) + '\\n');",
+    "",
+  ].join("\n");
+}
+
 async function readRequests(requestsPath) {
   const text = await readFile(requestsPath, "utf8");
   return text
@@ -585,11 +646,21 @@ async function readRequests(requestsPath) {
 
 function validEnv() {
   return [
+    "CLOUDNS_TRANSPORT=ssh",
     "CLOUDNS_AUTH_ID=auth-id-123",
     "CLOUDNS_AUTH_PASSWORD=auth-password-123",
     "VPS_HOST=example-vps",
     "VPS_USER=ops",
     "VPS_SSH_KEY=/tmp/cloudns-test-key",
+    "",
+  ].join("\n");
+}
+
+function directEnv() {
+  return [
+    "CLOUDNS_TRANSPORT=direct",
+    "CLOUDNS_AUTH_ID=auth-id-123",
+    "CLOUDNS_AUTH_PASSWORD=auth-password-123",
     "",
   ].join("\n");
 }
