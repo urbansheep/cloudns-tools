@@ -1,11 +1,15 @@
 import { join, resolve } from "node:path";
-import { loadConfig } from "./config.js";
+import { ConfigPromptAbortError, loadConfig } from "./config.js";
+import { SshCloudnsTransport } from "./transport/ssh-cloudns.js";
 import {
   CloudnsApiError,
   CloudnsAuthError,
-  SshCloudnsTransport,
+  DirectTransportError,
   SshTransportError,
-} from "./transport/ssh-cloudns.js";
+  TransportError,
+} from "./transport/cloudns-transport-core.js";
+import { DirectCloudnsTransport } from "./transport/direct-cloudns.js";
+import { TransportResolutionError } from "./transport/resolve-transport.js";
 import { parseArgs, UsageError } from "./options.js";
 import { ok, skipped, writeJson, writeResult } from "./output.js";
 import { CloudnsClient, normalizeRecordLike, recordsEquivalent } from "./cloudns-client.js";
@@ -26,7 +30,7 @@ const CONFIRMATION_MESSAGES = new Map([
 ]);
 const SUPPORTED_RECORD_TYPES = new Set(["A", "AAAA", "MX", "TXT", "CNAME", "NS", "SRV", "CAA"]);
 
-export async function runCli({ argv, cwd, stdout }) {
+export async function runCli({ argv, cwd, stdout, stdin }) {
   let parsed;
   try {
     parsed = parseArgs(argv);
@@ -38,7 +42,7 @@ export async function runCli({ argv, cwd, stdout }) {
   const [group, action, ...args] = positionals;
 
   if (group === "auth" && action === "check" && args.length === 0) {
-    return await runAuthCheck({ cwd, stdout });
+    return await runAuthCheck({ cwd, stdout, stdin, flags });
   }
 
   try {
@@ -53,7 +57,7 @@ export async function runCli({ argv, cwd, stdout }) {
       return writeUsage(stdout, confirmationMessage);
     }
 
-    const client = await loadClient(cwd);
+    const client = await loadClient(cwd, { flags, stdin, stdout });
     if (group === "zone") {
       return await runZoneCommand({ action, args, flags, stdout, client });
     }
@@ -73,11 +77,15 @@ export async function runCli({ argv, cwd, stdout }) {
   }
 }
 
-async function runAuthCheck({ cwd, stdout }) {
+async function runAuthCheck({ cwd, stdout, stdin, flags }) {
   let loaded;
   try {
-    loaded = await loadConfig(cwd);
-  } catch {
+    loaded = await loadConfig(cwd, { flags, stdin, stdout });
+  } catch (error) {
+    if (error instanceof TransportResolutionError || error instanceof ConfigPromptAbortError) {
+      stdout.write(`✗ CloudNS auth check failed: ${error.message}\n`);
+      return 2;
+    }
     stdout.write("✗ CloudNS auth check failed: could not read .env\n");
     return 2;
   }
@@ -90,7 +98,7 @@ async function runAuthCheck({ cwd, stdout }) {
   }
 
   try {
-    const transport = new SshCloudnsTransport(loaded.config);
+    const transport = createTransport(loaded.config);
     await transport.listZones();
     stdout.write("✓ CloudNS auth check ok\n");
     return 0;
@@ -99,17 +107,28 @@ async function runAuthCheck({ cwd, stdout }) {
   }
 }
 
-async function loadClient(cwd) {
+async function loadClient(cwd, { flags, stdin, stdout }) {
   let loaded;
   try {
-    loaded = await loadConfig(cwd);
-  } catch {
+    loaded = await loadConfig(cwd, { flags, stdin, stdout });
+  } catch (error) {
+    if (error instanceof TransportResolutionError || error instanceof ConfigPromptAbortError) {
+      throw new UsageError(error.message);
+    }
     throw new UsageError("could not read .env file");
   }
   if (!loaded.ok) {
     throw new UsageError(`missing required .env keys: ${loaded.missingKeys.join(", ")}`);
   }
-  return new CloudnsClient(new SshCloudnsTransport(loaded.config));
+  return new CloudnsClient(createTransport(loaded.config));
+}
+
+function createTransport(config) {
+  if (config.transport === "direct") {
+    return new DirectCloudnsTransport(config);
+  }
+
+  return new SshCloudnsTransport(config);
 }
 
 async function runZoneCommand({ action, args, flags, stdout, client }) {
@@ -344,8 +363,8 @@ function handleError(stdout, error) {
     stdout.write("✗ api · 0 records affected · CloudNS API rejected request\n");
     return 1;
   }
-  if (error instanceof SshTransportError) {
-    stdout.write("✗ api · 0 records affected · SSH transport failed\n");
+  if (error instanceof TransportError) {
+    stdout.write(`✗ api · 0 records affected · ${describeTransportError(error)}\n`);
     return 1;
   }
 
@@ -364,13 +383,24 @@ function handleAuthError(stdout, error) {
     return 1;
   }
 
-  if (error instanceof SshTransportError) {
-    stdout.write("✗ CloudNS auth check failed: SSH transport failed\n");
+  if (error instanceof TransportError) {
+    stdout.write(`✗ CloudNS auth check failed: ${describeTransportError(error)}\n`);
     return 1;
   }
 
   stdout.write("✗ CloudNS auth check failed: runtime error\n");
   return 1;
+}
+
+function describeTransportError(error) {
+  if (error instanceof DirectTransportError) {
+    return "Direct transport failed";
+  }
+  if (error instanceof SshTransportError) {
+    return "SSH transport failed";
+  }
+
+  return "transport failed";
 }
 
 function writeUsage(stdout, message) {

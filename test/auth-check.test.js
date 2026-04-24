@@ -19,14 +19,12 @@ after(async () => {
 
 test("missing .env keys fail with exit code 2", async () => {
   const result = await runAuthCheck({
-    envText: "CLOUDNS_AUTH_ID=123\n",
-    sshBody: 'printf "%s\\n" "{}"',
+    envText: ["CLOUDNS_TRANSPORT=direct", "CLOUDNS_AUTH_ID=123", ""].join("\n"),
   });
 
   assert.equal(result.code, 2);
   assert.match(result.stdout, /^✗ CloudNS auth check failed:/);
   assert.match(result.stdout, /CLOUDNS_AUTH_PASSWORD/);
-  assert.match(result.stdout, /VPS_HOST/);
   assert.equal(result.stderr, "");
 });
 
@@ -109,8 +107,8 @@ test("invalid CloudNS status marker prints API failure and exits 1", async () =>
 test("SSH transport failure prints a failure status and exits 1", async () => {
   const result = await runAuthCheck({
     envText: validEnv(),
-    sshExit: 255,
-    sshStderr: "network down",
+    transportExit: 255,
+    transportStderr: "network down",
   });
 
   assert.equal(result.code, 1);
@@ -119,11 +117,94 @@ test("SSH transport failure prints a failure status and exits 1", async () => {
   assert.doesNotMatch(result.stdout, /network down/);
 });
 
-async function runAuthCheck({ envText, responseBody, httpStatus, sshExit, sshStderr }) {
+test("direct transport via env succeeds without VPS keys", async () => {
+  const result = await runAuthCheck({
+    envText: directEnv(),
+    responseBody: '{"example.com":{"zone":"example.com"}}',
+    httpStatus: 200,
+    transport: "direct",
+  });
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "✓ CloudNS auth check ok\n");
+
+  const stdin = await readFile(result.stdinPath, "utf8");
+  assert.match(stdin, /auth-id=auth-id-123/);
+  assert.match(stdin, /auth-password=auth-password-123/);
+});
+
+test("direct transport via cli flag succeeds", async () => {
+  const result = await runAuthCheck({
+    envText: [
+      "CLOUDNS_AUTH_ID=auth-id-123",
+      "CLOUDNS_AUTH_PASSWORD=auth-password-123",
+      "",
+    ].join("\n"),
+    responseBody: '{"example.com":{"zone":"example.com"}}',
+    httpStatus: 200,
+    transport: "direct",
+    cliArgs: ["-t", "direct"],
+  });
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "✓ CloudNS auth check ok\n");
+});
+
+test("direct transport failure prints a failure status and exits 1", async () => {
+  const result = await runAuthCheck({
+    envText: directEnv(),
+    transportExit: 7,
+    transportStderr: "curl: (7) failed",
+  });
+
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "✗ CloudNS auth check failed: Direct transport failed\n");
+  assert.equal(result.stderr, "");
+});
+
+test("conflicting CLI and env transports fail with exit code 2", async () => {
+  const result = await runAuthCheck({
+    envText: validEnv(),
+    cliArgs: ["-t", "direct"],
+  });
+
+  assert.equal(result.code, 2);
+  assert.equal(result.stdout, "✗ CloudNS auth check failed: transport selector conflict between CLI and env\n");
+});
+
+test("missing transport in non-interactive mode fails with exit code 2", async () => {
+  const result = await runAuthCheck({
+    envText: [
+      "CLOUDNS_AUTH_ID=auth-id-123",
+      "CLOUDNS_AUTH_PASSWORD=auth-password-123",
+      "VPS_HOST=example-vps",
+      "VPS_USER=ops",
+      "VPS_SSH_KEY=/tmp/cloudns-test-key",
+      "",
+    ].join("\n"),
+  });
+
+  assert.equal(result.code, 2);
+  assert.equal(
+    result.stdout,
+    "✗ CloudNS auth check failed: transport must be set via --transport or CLOUDNS_TRANSPORT in non-interactive mode\n",
+  );
+});
+
+async function runAuthCheck({
+  envText,
+  responseBody,
+  httpStatus,
+  transportExit,
+  transportStderr,
+  transport,
+  cliArgs = [],
+}) {
   const projectDir = await mkdtemp(join(tmpdir(), "cloudns-auth-check-"));
   cleanupPaths.add(projectDir);
   const fakeBin = join(projectDir, "bin");
   const sshArgsPath = join(projectDir, "ssh-args.txt");
+  const curlArgsPath = join(projectDir, "curl-args.txt");
   const stdinPath = join(projectDir, "ssh-stdin.txt");
   await mkdir(fakeBin);
   await writeFile(join(projectDir, ".env"), envText);
@@ -134,14 +215,19 @@ async function runAuthCheck({ envText, responseBody, httpStatus, sshExit, sshStd
           String(httpStatus ?? 200),
         )}\n`;
   const failureScript =
-    sshExit === undefined
+    transportExit === undefined
       ? ""
-      : `${sshStderr ? `printf '%s\\n' ${shellQuote(sshStderr)} >&2\n` : ""}exit ${sshExit}\n`;
+      : `${transportStderr ? `printf '%s\\n' ${shellQuote(transportStderr)} >&2\n` : ""}exit ${transportExit}\n`;
   await writeFile(
     join(fakeBin, "ssh"),
     `#!/bin/sh\nprintf '%s\\n' "$@" > ${shellQuote(sshArgsPath)}\ncat > ${shellQuote(stdinPath)}\n${responseScript}${failureScript}`,
   );
   await chmod(join(fakeBin, "ssh"), 0o755);
+  await writeFile(
+    join(fakeBin, "curl"),
+    `#!/bin/sh\nprintf '%s\\n' "$@" > ${shellQuote(curlArgsPath)}\ncat > ${shellQuote(stdinPath)}\n${responseScript}${failureScript}`,
+  );
+  await chmod(join(fakeBin, "curl"), 0o755);
 
   const env = {
     ...process.env,
@@ -149,30 +235,46 @@ async function runAuthCheck({ envText, responseBody, httpStatus, sshExit, sshStd
   };
 
   try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, "auth", "check"], {
-      cwd: projectDir,
-      env,
-      timeout: CLI_TEST_TIMEOUT_MS,
-    });
-    return { code: 0, stdout, stderr, sshArgsPath, stdinPath };
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [binPath, "auth", "check", ...cliArgs],
+      {
+        cwd: projectDir,
+        env,
+        timeout: CLI_TEST_TIMEOUT_MS,
+      },
+    );
+    return { code: 0, stdout, stderr, sshArgsPath, curlArgsPath, stdinPath, transport };
   } catch (error) {
     return {
       code: error.code,
       stdout: error.stdout ?? "",
       stderr: error.stderr ?? "",
       sshArgsPath,
+      curlArgsPath,
       stdinPath,
+      transport,
     };
   }
 }
 
 function validEnv() {
   return [
+    "CLOUDNS_TRANSPORT=ssh",
     "CLOUDNS_AUTH_ID=auth-id-123",
     "CLOUDNS_AUTH_PASSWORD=auth-password-123",
     "VPS_HOST=example-vps",
     "VPS_USER=ops",
     "VPS_SSH_KEY=/tmp/cloudns-test-key",
+    "",
+  ].join("\n");
+}
+
+function directEnv() {
+  return [
+    "CLOUDNS_TRANSPORT=direct",
+    "CLOUDNS_AUTH_ID=auth-id-123",
+    "CLOUDNS_AUTH_PASSWORD=auth-password-123",
     "",
   ].join("\n");
 }
