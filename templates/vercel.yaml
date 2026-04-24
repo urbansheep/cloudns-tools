@@ -1,0 +1,33 @@
+name: vercel
+description: >
+  Vercel custom domain setup using external DNS. Apex domain uses a static A record.
+  www subdomain uses the stable legacy CNAME. Project-specific or wildcard guidance
+  stays in the documentation catalog.
+authoritative_source:
+  name: Vercel Docs — Adding & Configuring a Custom Domain
+  url: https://vercel.com/docs/projects/domains/add-a-domain
+agent_hints:
+  safe_to_merge: false
+  replace_existing_apex_a: true
+  note: >
+    For wildcard domains, use the nameserver method described in the documentation catalog,
+    not this preset.
+  conflicts_with:
+    - other-static-hosting-providers
+records:
+  - type: A
+    host: "@"
+    value: "76.76.21.21"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Vercel's static anycast IP for apex domains."
+  - type: CNAME
+    host: "www"
+    value: "cname.vercel-dns.com"
+    ttl: 3600
+    required: false
+    proxied: false
+    note: "Static legacy CNAME for www."
+notes:
+  - "For subdomains other than www, or for wildcard domains, consult docs/examples/templates/vercel.yaml."

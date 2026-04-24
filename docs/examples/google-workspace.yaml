@@ -1,0 +1,70 @@
+# ClouDNS Template: Google Workspace
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# Google moved to a single-record MX setup in April 2023 (smtp.google.com).
+# Both the single-record and legacy 5-record ASPMX configs are fully supported in 2026.
+# NEW setups: use the single smtp.google.com record below.
+# EXISTING setups on ASPMX: do NOT change if mail is working — see notes.
+#
+# Authoritative source: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
+# SPF source: https://support.google.com/a/answer/33786
+
+name: google-workspace
+description: >
+  Google Workspace (Gmail) — MX and SPF records for a custom domain.
+  Use the single-record MX setup for new domains (post-April 2023).
+  Legacy 5-record ASPMX setup is preserved as a commented alternative
+  for pre-2023 accounts that are already working.
+authoritative_source:
+  name: Google Workspace — Set up MX records
+  url: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
+agent_hints:
+  safe_to_merge: false
+  replace_existing_mx: true
+  note: >
+    Remove ALL existing MX records before adding Google's. Multiple competing
+    MX records from different providers will cause mail delivery failures.
+  conflicts_with:
+    - other-mail-providers
+    - microsoft-365
+    - fastmail
+
+records:
+  # ── MX (single-record setup, recommended for all new domains post-Apr 2023) ──
+  - type: MX
+    host: "@"
+    value: "smtp.google.com"
+    priority: 1
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Primary and only MX record for new Google Workspace setups.
+      Google routes to the same underlying infrastructure as the legacy ASPMX set.
+
+  # ── SPF (required for mail delivery) ──
+  - type: TXT
+    host: "@"
+    value: "v=spf1 include:_spf.google.com ~all"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Google manages IP ranges behind _spf.google.com automatically.
+      If you send from additional providers, merge their include: into ONE SPF record.
+      Multiple SPF TXT records on @ will break SPF validation.
+
+notes:
+  - >
+    LEGACY 5-record ASPMX setup (pre-2023 accounts, fully supported in 2026):
+    Do NOT change if mail is already working on ASPMX records.
+    MX  @  ASPMX.L.GOOGLE.COM        priority 1
+    MX  @  ALT1.ASPMX.L.GOOGLE.COM   priority 5
+    MX  @  ALT2.ASPMX.L.GOOGLE.COM   priority 5
+    MX  @  ALT3.ASPMX.L.GOOGLE.COM   priority 10
+    MX  @  ALT4.ASPMX.L.GOOGLE.COM   priority 10
+  - "After adding MX, activate Gmail in Google Admin console: Account > Domains > Manage > Activate Gmail."
+  - "DNS propagation can take up to 72 hours."
+  - "DKIM and DMARC records are configured separately from the Google Admin console — they are domain-specific and cannot be templated."

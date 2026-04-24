@@ -1,0 +1,6 @@
+name: netflix
+description: Netflix domain verification placeholder.
+records:
+  - type: TXT
+    name: "@"
+    value: netflix-verification=replace-me

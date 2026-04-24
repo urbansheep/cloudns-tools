@@ -1,0 +1,51 @@
+# ClouDNS Template: Vultr
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# Vultr DNS uses two static authoritative nameservers — these are fixed
+# and have not changed. They are confirmed in official Vultr docs (2024–2025).
+#
+# ns1.vultr.com  →  173.199.96.96
+# ns2.vultr.com  →  173.199.96.97
+#
+# Authoritative source: https://docs.vultr.com/support/products/network/how-can-i-point-my-domain-to-vultr-dns
+
+name: vultr
+description: >
+  Vultr DNS nameserver delegation. Point your domain registrar's NS records
+  to Vultr's two authoritative nameservers to manage all DNS records from
+  the Vultr console or API.
+authoritative_source:
+  name: Vultr Docs — How Can I Point My Domain to Vultr DNS?
+  url: https://docs.vultr.com/support/products/network/how-can-i-point-my-domain-to-vultr-dns
+agent_hints:
+  safe_to_apply: true
+  note: >
+    These nameserver values are static and shared across all Vultr customers.
+    After pointing NS records, add domain and DNS records via Vultr console:
+    Products > Network > DNS > Add Domain.
+  api_endpoint: "https://api.vultr.com/v2/domains"
+
+records:
+  - type: NS
+    host: "@"
+    value: "ns1.vultr.com"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Primary Vultr nameserver. IP: 173.199.96.96"
+
+  - type: NS
+    host: "@"
+    value: "ns2.vultr.com"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Secondary Vultr nameserver. IP: 173.199.96.97"
+
+notes:
+  - "Replace existing NS records entirely — do not keep previous registrar NS records alongside these."
+  - "DNS propagation takes 24–48 hours after NS change."
+  - "Once NS is delegated, manage all records (A, MX, TXT, CNAME) from Vultr console or API."
+  - "Vultr API for DNS records: https://www.vultr.com/api/#tag/dns"

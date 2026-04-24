@@ -1,0 +1,14 @@
+name: fastmail
+description: Fastmail MX and SPF records.
+records:
+  - type: MX
+    name: "@"
+    value: in1-smtp.messagingengine.com
+    priority: 10
+  - type: MX
+    name: "@"
+    value: in2-smtp.messagingengine.com
+    priority: 20
+  - type: TXT
+    name: "@"
+    value: "v=spf1 include:spf.messagingengine.com ?all"

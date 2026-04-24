@@ -1,0 +1,9 @@
+name: tilda
+description: Tilda website A records.
+records:
+  - type: A
+    name: "@"
+    value: 185.215.4.66
+  - type: A
+    name: "www"
+    value: 185.215.4.66

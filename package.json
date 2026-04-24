@@ -1,0 +1,34 @@
+{
+  "name": "cloudns-tools",
+  "version": "0.1.0",
+  "description": "DNS operations CLI for ClouDNS accounts reached through an IP-whitelisted VPS",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "cloudns": "./bin/cloudns.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "templates/",
+    "README.md",
+    ".env.example"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/urbansheep/cloudns-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/urbansheep/cloudns-tools/issues"
+  },
+  "homepage": "https://github.com/urbansheep/cloudns-tools#readme",
+  "dependencies": {
+    "yaml": "^2.8.3"
+  }
+}

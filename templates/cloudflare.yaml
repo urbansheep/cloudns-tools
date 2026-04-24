@@ -1,0 +1,9 @@
+name: cloudflare
+description: Cloudflare nameserver placeholders.
+records:
+  - type: NS
+    name: "@"
+    value: example.ns.cloudflare.com
+  - type: NS
+    name: "@"
+    value: example2.ns.cloudflare.com

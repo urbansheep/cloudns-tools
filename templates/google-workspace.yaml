@@ -1,0 +1,41 @@
+name: google-workspace
+description: >
+  Google Workspace (Gmail) — MX and SPF records for a custom domain.
+  Use the single-record MX setup for new domains (post-April 2023).
+  Legacy 5-record ASPMX setup is preserved in the documentation catalog
+  for pre-2023 accounts that are already working.
+authoritative_source:
+  name: Google Workspace — Set up MX records
+  url: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
+agent_hints:
+  safe_to_merge: false
+  replace_existing_mx: true
+  note: >
+    Remove all existing MX records before adding Google's. Multiple competing
+    MX records from different providers will cause mail delivery failures.
+  conflicts_with:
+    - other-mail-providers
+    - microsoft-365
+    - fastmail
+records:
+  - type: MX
+    host: "@"
+    value: "smtp.google.com"
+    priority: 1
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Primary and only MX record for new Google Workspace setups.
+      Google routes to the same underlying infrastructure as the legacy ASPMX set.
+  - type: TXT
+    host: "@"
+    value: "v=spf1 include:_spf.google.com ~all"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Google manages IP ranges behind _spf.google.com automatically.
+      If you send from additional providers, merge their include: into one SPF record.
+notes:
+  - "DKIM and DMARC records are configured separately from the Google Admin console and are not bundled in this runtime-safe preset."

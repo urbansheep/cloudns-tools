@@ -1,0 +1,63 @@
+# ClouDNS Template: Vercel
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# Vercel uses two methods for external DNS:
+#   Apex domain  → A record → 76.76.21.21  (static, still current as of 2026)
+#   Subdomain    → CNAME    → cname.vercel-dns.com  (static legacy, still works)
+#                           OR a unique per-project CNAME like
+#                              <hash>.vercel-dns-017.com (shown in Vercel dashboard)
+# Vercel now issues per-project dynamic CNAMEs for subdomains. The static
+# cname.vercel-dns.com continues to work but the dashboard recommends the
+# unique CNAME for new subdomain setups.
+#
+# Authoritative source: https://vercel.com/docs/projects/domains/add-a-domain
+# Nameservers (alternative): https://vercel.com/docs/domains/working-with-nameservers
+
+name: vercel
+description: >
+  Vercel custom domain setup using external DNS. Apex domain uses a static A record.
+  www subdomain uses CNAME to cname.vercel-dns.com (stable legacy) or the unique
+  per-project CNAME visible in your Vercel project Settings > Domains.
+authoritative_source:
+  name: Vercel Docs — Adding & Configuring a Custom Domain
+  url: https://vercel.com/docs/projects/domains/add-a-domain
+agent_hints:
+  safe_to_merge: false
+  replace_existing_apex_a: true
+  note: >
+    For wildcard domains (*.) Vercel REQUIRES the Nameserver method, not A/CNAME.
+    Vercel nameservers: ns1.vercel-dns.com / ns2.vercel-dns.com
+  conflicts_with:
+    - other-static-hosting-providers
+
+records:
+  # ── Apex domain (e.g. example.com) ──
+  - type: A
+    host: "@"
+    value: "76.76.21.21"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Vercel's static anycast IP for apex domains. Current as of 2026.
+      Do NOT proxy through Cloudflare (set to DNS-only / grey cloud).
+
+  # ── www subdomain ──
+  - type: CNAME
+    host: "www"
+    value: "cname.vercel-dns.com"
+    ttl: 3600
+    required: false
+    proxied: false
+    note: >
+      Static legacy CNAME — still fully supported. For new projects, Vercel may
+      show a unique per-project CNAME (e.g. <hash>.vercel-dns-017.com) in
+      Settings > Domains; prefer that if available. Both route to the same infra.
+
+notes:
+  - "Add the domain in Vercel dashboard first: Project > Settings > Domains > Add Domain."
+  - "Vercel validates DNS automatically once records propagate (usually minutes to 1 hour)."
+  - "For subdomains other than www, use CNAME to cname.vercel-dns.com or the project-specific CNAME."
+  - "Wildcard domains require Vercel nameservers (ns1.vercel-dns.com / ns2.vercel-dns.com)."

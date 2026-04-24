@@ -1,0 +1,45 @@
+# ClouDNS Template: Cloudflare
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# IMPORTANT: Cloudflare assigns per-account branded nameservers automatically
+# (e.g. arya.ns.cloudflare.com / ivan.ns.cloudflare.com).
+# They CANNOT be chosen or predicted — they are displayed in the Cloudflare dashboard
+# after you add your domain. Replace the placeholders below with the values shown there.
+#
+# Authoritative source: https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/
+
+name: cloudflare
+description: >
+  Cloudflare nameserver delegation. Point your domain registrar's NS records
+  to the two Cloudflare-assigned nameservers shown in your Cloudflare dashboard
+  under DNS > Nameservers. The names are unique per account and cannot be
+  determined in advance.
+authoritative_source:
+  name: Cloudflare Docs — Change your nameservers (Full setup)
+  url: https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/
+agent_hints:
+  safe_to_apply: false
+  requires_manual_lookup: true
+  lookup_instruction: >
+    Log into dash.cloudflare.com, add the domain, then copy the two
+    assigned nameserver hostnames from DNS > Nameservers. They follow the
+    pattern <name>.ns.cloudflare.com. Replace the placeholder values below.
+  proxied_mx_warning: >
+    MX and TXT (SPF/DKIM/DMARC) records MUST be set to "DNS only" (grey cloud).
+    Never proxy mail-related records through Cloudflare.
+
+records:
+  - type: NS
+    host: "@"
+    value: "<assigned-ns1>.ns.cloudflare.com"
+    required: true
+    proxied: false
+    note: "Assigned by Cloudflare per account. Check dashboard after adding domain."
+  - type: NS
+    host: "@"
+    value: "<assigned-ns2>.ns.cloudflare.com"
+    required: true
+    proxied: false
+    note: "Assigned by Cloudflare per account. Check dashboard after adding domain."

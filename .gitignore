@@ -1,0 +1,10 @@
+.env
+.worktrees/
+worktrees/
+.DS_Store
+node_modules/
+coverage/
+.nyc_output/
+dist/
+build/
+.cache/

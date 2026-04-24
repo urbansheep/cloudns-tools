@@ -1,0 +1,103 @@
+# ClouDNS Template: Fastmail
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# Authoritative source: https://www.fastmail.help/hc/en-us/articles/360060591153-Manual-DNS-configuration
+# DKIM source: https://www.fastmail.help/hc/en-us/articles/4627098536207-Why-do-I-need-DKIM
+#
+# NOTE: Fastmail previously used in1.smtp / in2.smtp (with dots) — these are
+# DEPRECATED since 2012. Current records use a dash: in1-smtp / in2-smtp.
+# The SPF softfail ~all is Fastmail's documented default.
+
+name: fastmail
+description: >
+  Fastmail custom domain — MX, SPF, and DKIM records for receiving and
+  authenticating email. DKIM requires three CNAME records with domain-specific
+  hostnames; replace {mydomain.com} with your actual domain.
+authoritative_source:
+  name: Fastmail — Manual DNS configuration
+  url: https://www.fastmail.help/hc/en-us/articles/360060591153-Manual-DNS-configuration
+agent_hints:
+  safe_to_merge: false
+  replace_existing_mx: true
+  requires_placeholder_substitution: true
+  placeholder: "{mydomain.com}"
+  conflicts_with:
+    - google-workspace
+    - microsoft-365
+    - other-mail-providers
+
+records:
+  # ── MX (receive mail) ──
+  - type: MX
+    host: "@"
+    value: "in1-smtp.messagingengine.com"
+    priority: 10
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Primary inbound MX. Dash-form only — do NOT use the deprecated dot-form (in1.smtp...)."
+
+  - type: MX
+    host: "@"
+    value: "in2-smtp.messagingengine.com"
+    priority: 20
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Secondary inbound MX. Dash-form only."
+
+  # ── SPF (outbound authentication) ──
+  - type: TXT
+    host: "@"
+    value: "v=spf1 include:spf.messagingengine.com ?all"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Fastmail's documented SPF record. Uses ?all (neutral) rather than ~all (softfail).
+      If you also send from other services, add their include: statements to this
+      single TXT record.
+
+  # ── DKIM (signing — three CNAME records required) ──
+  - type: CNAME
+    host: "fm1._domainkey.{mydomain.com}"
+    value: "fm1.{mydomain.com}.dkim.fmhosted.com"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Replace {mydomain.com} with your actual domain in both host and value."
+
+  - type: CNAME
+    host: "fm2._domainkey.{mydomain.com}"
+    value: "fm2.{mydomain.com}.dkim.fmhosted.com"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Replace {mydomain.com} with your actual domain in both host and value."
+
+  - type: CNAME
+    host: "fm3._domainkey.{mydomain.com}"
+    value: "fm3.{mydomain.com}.dkim.fmhosted.com"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Replace {mydomain.com} with your actual domain in both host and value."
+
+  # ── DMARC (optional but strongly recommended) ──
+  - type: TXT
+    host: "_dmarc.{mydomain.com}"
+    value: "v=DMARC1; p=none;"
+    ttl: 3600
+    required: false
+    proxied: false
+    note: >
+      Minimal DMARC policy (monitor only). Change p=none to p=quarantine or
+      p=reject once you have confirmed DKIM and SPF are passing.
+
+notes:
+  - "Deprecated DKIM selector mesmtp._domainkey is only for domains hosted at Fastmail before 2018."
+  - "All three fm1/fm2/fm3 DKIM CNAMEs are required — DKIM will not work with fewer than three."
+  - "After adding records, verify in Fastmail Settings > Domains > Recheck DNS."
+  - "Fastmail also offers NS hosting: ns1.messagingengine.com / ns2.messagingengine.com (manages all DNS automatically)."

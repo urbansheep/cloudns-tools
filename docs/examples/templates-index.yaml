@@ -1,0 +1,76 @@
+# ClouDNS Templates Index
+# schema_version: 1
+# last_updated: 2026-04-24
+#
+# Machine-readable index of all bundled DNS templates.
+# Agents should read this file first to discover available templates,
+# then load the specific YAML for the target provider.
+
+templates:
+
+  - id: cloudflare
+    file: cloudflare.yaml
+    provider: Cloudflare
+    category: nameservers
+    use_case: "Delegate domain DNS management to Cloudflare"
+    requires_manual_lookup: true
+    last_verified: "2026-04-24"
+    authoritative_url: https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/
+
+  - id: google-workspace
+    file: google-workspace.yaml
+    provider: Google
+    category: email
+    use_case: "Set up Gmail / Google Workspace for a custom domain"
+    requires_manual_lookup: false
+    last_verified: "2026-04-24"
+    authoritative_url: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
+    conflicts_with: [fastmail, microsoft-365]
+
+  - id: vercel
+    file: vercel.yaml
+    provider: Vercel
+    category: hosting
+    use_case: "Point a custom domain to a Vercel project"
+    requires_manual_lookup: false
+    last_verified: "2026-04-24"
+    authoritative_url: https://vercel.com/docs/projects/domains/add-a-domain
+
+  - id: fastmail
+    file: fastmail.yaml
+    provider: Fastmail
+    category: email
+    use_case: "Set up Fastmail email for a custom domain (MX + SPF + DKIM)"
+    requires_manual_lookup: false
+    requires_placeholder_substitution: true
+    placeholder: "{mydomain.com}"
+    last_verified: "2026-04-24"
+    authoritative_url: https://www.fastmail.help/hc/en-us/articles/360060591153-Manual-DNS-configuration
+    conflicts_with: [google-workspace, microsoft-365]
+
+  - id: netflix
+    file: netflix.yaml
+    provider: Netflix
+    category: verification
+    use_case: "Verify domain ownership for Netflix Studio / Partner Hub"
+    requires_manual_lookup: true
+    last_verified: "2026-04-24"
+    authoritative_url: https://partnerhelp.netflixstudios.com/hc/en-us
+
+  - id: tilda
+    file: tilda.yaml
+    provider: Tilda
+    category: hosting
+    use_case: "Point a custom domain to a Tilda website"
+    requires_manual_lookup: true
+    last_verified: "2026-04-24"
+    authoritative_url: https://help.tilda.cc/customdomain
+
+  - id: vultr
+    file: vultr.yaml
+    provider: Vultr
+    category: nameservers
+    use_case: "Delegate domain DNS management to Vultr"
+    requires_manual_lookup: false
+    last_verified: "2026-04-24"
+    authoritative_url: https://docs.vultr.com/support/products/network/how-can-i-point-my-domain-to-vultr-dns

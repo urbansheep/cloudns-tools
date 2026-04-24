@@ -1,0 +1,62 @@
+# ClouDNS Template: Tilda
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# Tilda assigns IP addresses dynamically per site. The correct IP is shown
+# in Site Settings → Domain after you enter your domain name and save.
+# Do NOT hardcode a specific IP from a third-party guide — use the one
+# Tilda gives you for your specific site.
+#
+# Known Tilda IP pool (for reference only, do NOT use without confirming in dashboard):
+#   185.215.4.66  — most common, shown in GoDaddy/Namecheap/Cloudflare guides
+#   185.215.4.10  — alternative, used for some accounts (Tilda Publishing JSC, RU)
+#
+# Authoritative source: https://help.tilda.cc/customdomain
+# Tilda NS hosting (alternative): ns1.tildadns.com / ns2.tildadns.com
+
+name: tilda
+description: >
+  Tilda website custom domain setup. Tilda assigns a site-specific IP address
+  visible in Site Settings → Domain. Two A records are required: one for the
+  apex domain (@) and one for www. The IP value below is the most common
+  documented value but MUST be confirmed from your Tilda dashboard.
+authoritative_source:
+  name: Tilda Help — How To Connect a Domain Name
+  url: https://help.tilda.cc/customdomain
+agent_hints:
+  safe_to_apply: false
+  requires_manual_lookup: true
+  lookup_instruction: >
+    Open Tilda Site Settings → Domain, enter your domain name, save, and
+    copy the IP address shown by Tilda. Use that IP in both A records below.
+    Do NOT use Cloudflare proxy (orange cloud) for these records.
+  proxied: false
+  cloudflare_warning: >
+    Tilda explicitly warns: do not enable Cloudflare proxying for these records.
+    It conflicts with Tilda's own DDoS protection and will make the site inaccessible.
+
+records:
+  - type: A
+    host: "@"
+    value: "185.215.4.66"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: >
+      Most common Tilda IP. Verify in your Tilda dashboard — the system assigns
+      the most suitable IP for your account automatically.
+
+  - type: A
+    host: "www"
+    value: "185.215.4.66"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Must match the apex A record. Use the same IP shown in Site Settings → Domain."
+
+notes:
+  - "Only ONE A record per host name (@ and www) — multiple A records for the same host will break the connection."
+  - "Do NOT add wildcard A records (*) — Tilda explicitly prohibits these."
+  - "DNS propagation takes 3–24 hours after adding records."
+  - "Alternative: delegate to Tilda NS servers (ns1.tildadns.com / ns2.tildadns.com) for fully automatic setup."

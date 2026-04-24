@@ -1,0 +1,48 @@
+# ClouDNS Template: Netflix
+# schema_version: 1
+# template_version: 2026-04-24
+# last_verified: 2026-04-24
+#
+# Netflix domain verification is used by Netflix Studio / Partner Hub services
+# (e.g. Frame.io, Netflix Pitch, partner portals) to confirm domain ownership.
+# The TXT value is UNIQUE per organization — Netflix generates it during
+# the domain verification workflow. It CANNOT be determined in advance.
+#
+# NOTE: Netflix does NOT publish a public DNS setup guide. The verification
+# value is issued inside the Netflix Partner Hub / Studio portal only.
+# This template is intentionally a placeholder with agent instructions.
+
+name: netflix
+description: >
+  Netflix domain verification TXT record. Used by Netflix Studio and partner
+  services (e.g. Frame.io, Pitch) to confirm domain ownership.
+  The verification string is generated per-organization inside the Netflix
+  Partner Portal — it cannot be pre-filled. Replace the placeholder below
+  with the actual value shown in the portal.
+authoritative_source:
+  name: Netflix Partner Hub (login required)
+  url: https://partnerhelp.netflixstudios.com/hc/en-us
+agent_hints:
+  safe_to_apply: false
+  requires_manual_lookup: true
+  lookup_instruction: >
+    Log into the Netflix Studio / Partner Portal, navigate to Domain Verification
+    or Settings > Domain, and copy the generated TXT value. It follows the pattern
+    netflix-verification=<unique-token>. Replace the placeholder value below.
+  expires: false
+  note: >
+    Unlike Google/Microsoft verification tokens, Netflix verification TXT records
+    are persistent (do not expire once verified). Safe to leave in DNS indefinitely.
+
+records:
+  - type: TXT
+    host: "@"
+    value: "netflix-verification=<your-unique-token-from-partner-portal>"
+    ttl: 3600
+    required: true
+    proxied: false
+    note: "Value is issued by Netflix Partner Hub. Replace placeholder with actual token."
+
+notes:
+  - "This record does not affect email delivery or website routing."
+  - "Do not remove after verification — Netflix may re-check the record periodically."
