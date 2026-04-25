@@ -48,11 +48,10 @@ Direct mode executes local `curl` without SSH.
 
 ## Global Flags
 
-- `--dry-run`: preview write commands without mutating ClouDNS
 - `-n`, `--dry-run`: preview write commands without mutating ClouDNS
 - `-f`, `--format json`: emit structured JSON for agents and scripts
 - `-t`, `--transport`: select `ssh` or `direct`
-- `--verbose`: reserved for detailed diagnostics
+- `-v`, `--verbose`: emit diagnostic messages to `stderr` (transport selection, dry-run state); safe alongside `--format json` since verbose output never goes to `stdout`
 - `-y`, `--confirm`: required for destructive commands
 - `--refresh-templates`: reserved for future preset refresh behavior; currently not implemented
 - `-T`, `--type`: record type selector
@@ -63,8 +62,8 @@ Direct mode executes local `curl` without SSH.
 ## Auth
 
 ```bash
-./bin/cloudns.js auth check
-./bin/cloudns.js auth check -t direct
+cloudns auth check
+cloudns auth check -t direct
 ```
 
 Runs a read-only zones-list probe through the selected transport. Success exits `0`. Missing config or rejected credentials exit `2`.
@@ -72,40 +71,41 @@ Runs a read-only zones-list probe through the selected transport. Success exits 
 ## Zones
 
 ```bash
-./bin/cloudns.js zone list
-./bin/cloudns.js zone list -f json
-./bin/cloudns.js zone add example.com
-./bin/cloudns.js zone add example.com -n
-./bin/cloudns.js zone rm example.com -y
+cloudns zone list
+cloudns zone list -f json
+cloudns zone add example.com
+cloudns zone add example.com -n
+cloudns zone rm example.com -y
 ```
 
-`zone add` and `zone rm` are idempotent. Removing a zone requires `--confirm`.
+`zone add` and `zone rm` are idempotent: adding an existing zone or removing an absent zone is a no-op and exits `0`. Removing a zone requires `--confirm`.
 `zone list` prints zone names in plain text by default.
 
 ## Records
 
 ```bash
-./bin/cloudns.js record list example.com
-./bin/cloudns.js record add example.com --type A --name @ --value 192.0.2.1
-./bin/cloudns.js record add example.com -T A -N @ -V 192.0.2.1
-./bin/cloudns.js record rm example.com --id 12345 -y
-./bin/cloudns.js record rm example.com --type TXT --name @ --value "v=spf1 -all" -y
+cloudns record list example.com
+cloudns record add example.com --type A --name @ --value 192.0.2.1
+cloudns record add example.com -T A -N @ -V 192.0.2.1
+cloudns record rm example.com --id 12345 -y
+cloudns record rm example.com --type TXT --name @ --value "v=spf1 -all" -y
 ```
 
 Supported first-pass record types are `A`, `AAAA`, `MX`, `TXT`, `CNAME`, `NS`, `SRV`, and `CAA`. Default TTL is `3600`.
+`record add` is idempotent: adding a record that already exists is a no-op and exits `0`.
 `record list` prints record rows in plain text by default.
 Removing records requires `--confirm`.
 
 ## Presets
 
 ```bash
-./bin/cloudns.js preset diff example.com fastmail
-./bin/cloudns.js preset diff example.com fastmail -f json
-./bin/cloudns.js preset apply example.com fastmail
-./bin/cloudns.js preset remove example.com fastmail -n
+cloudns preset diff example.com fastmail
+cloudns preset diff example.com fastmail -f json
+cloudns preset apply example.com fastmail
+cloudns preset remove example.com fastmail -n
 ```
 
-Preset files live in `templates/`. Apply and remove are idempotent. `preset diff --format json` emits objects with `action`, `type`, `name`, and `value`.
+Preset files live in `templates/`. Apply and remove are idempotent: running the same command twice leaves the zone in the same state. `preset diff --format json` emits objects with `action`, `type`, `name`, and `value`.
 Plain `preset diff` shows additions and removals in human-readable form.
 Reference-only provider examples and source notes live in `docs/examples/`.
 Templates that require manual lookup or still contain placeholders are intentionally kept out of `templates/`.
@@ -113,10 +113,10 @@ Templates that require manual lookup or still contain placeholders are intention
 ## Backup And Restore
 
 ```bash
-./bin/cloudns.js backup create example.com -o backups/example.com.json
-./bin/cloudns.js backup create example.com -f bind -o backups/example.com.zone
-./bin/cloudns.js backup restore example.com --input backups/example.com.json -y -n
-./bin/cloudns.js backup restore example.com --input backups/example.com.json -y
+cloudns backup create example.com -o backups/example.com.json
+cloudns backup create example.com -f bind -o backups/example.com.zone
+cloudns backup restore example.com --input backups/example.com.json -y -n
+cloudns backup restore example.com --input backups/example.com.json -y
 ```
 
 JSON backups are the safe restore format. BIND export is supported for archival use. BIND import is intentionally not the default restore path because ClouDNS import can replace existing records in bulk.

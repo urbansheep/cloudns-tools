@@ -85,6 +85,8 @@ $ cloudns record list fieldnotes.net
 
 ### Record add — idempotent
 
+Adding a record that already exists is a no-op and exits `0`:
+
 ```
 $ cloudns record add fieldnotes.net -T A -N dev -V 203.0.113.55
 ✓ record add · 1 records affected · ok
