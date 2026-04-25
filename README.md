@@ -48,14 +48,67 @@ In SSH mode, credentials are sent in POST data over SSH stdin and are not placed
 
 ## Examples
 
-```bash
-./bin/cloudns.js auth check
-./bin/cloudns.js auth check -t direct
-./bin/cloudns.js zone list
-./bin/cloudns.js zone list -f json
-./bin/cloudns.js record add example.com -T A -N www -V 192.0.2.10
-./bin/cloudns.js preset diff example.com fastmail -f json
-./bin/cloudns.js backup create example.com -o backups/example.com.json
+### Auth check
+
+```
+$ ./bin/cloudns.js auth check -t direct
+✓ CloudNS auth check ok
+
+$ ./bin/cloudns.js auth check
+✗ CloudNS auth check failed: transport must be set via --transport or CLOUDNS_TRANSPORT in non-interactive mode
+```
+
+### Zone list
+
+```
+$ ./bin/cloudns.js zone list
+✓ zone list · 2 zones · ok
+  - fieldnotes.net
+  - fieldnotes.ru
+
+$ ./bin/cloudns.js zone list -f json
+{"action":"zone list","status":"ok","recordsAffected":2,"data":[{"name":"fieldnotes.net"},{"name":"fieldnotes.ru"}]}
+```
+
+### Record list
+
+```
+$ ./bin/cloudns.js record list fieldnotes.net
+✓ record list · 5 records · ok
+  - A · @ · 203.0.113.42 · ttl 3600
+  - A · www · 203.0.113.42 · ttl 3600
+  - MX · @ · in1-smtp.messagingengine.com · ttl 3600
+  - TXT · @ · v=spf1 include:spf.messagingengine.com ?all · ttl 3600
+  - CNAME · blog · ext.blogging.example · ttl 3600
+```
+
+### Record add — idempotent
+
+```
+$ ./bin/cloudns.js record add fieldnotes.net -T A -N dev -V 203.0.113.55
+✓ record add · 1 records affected · ok
+
+$ ./bin/cloudns.js record add fieldnotes.net -T A -N dev -V 203.0.113.55
+skipped record add · 0 records affected · already exists
+```
+
+### Preset diff
+
+```
+$ ./bin/cloudns.js preset diff fieldnotes.net fastmail
+✓ preset diff · 3 changes · ok
+  additions:
+  - MX · @ · in1-smtp.messagingengine.com
+  - MX · @ · in2-smtp.messagingengine.com
+  - TXT · @ · v=spf1 include:spf.messagingengine.com ?all
+```
+
+### Backup
+
+```
+$ ./bin/cloudns.js backup create fieldnotes.net
+✓ backup create · 5 records affected · ok
+wrote backups/fieldnotes.net-20260425T093000.json
 ```
 
 ## Exit Codes
