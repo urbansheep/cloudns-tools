@@ -24,6 +24,22 @@ test("unknown command fails with usage exit code 2", async () => {
   assert.match(result.stdout, /^✗ usage/);
 });
 
+test("no-argument invocation exits 2", async () => {
+  const result = await runCli([]);
+
+  assert.equal(result.code, 2);
+});
+
+test("zone list -f json -v emits parseable JSON on stdout", async () => {
+  const result = await runCli(["zone", "list", "-f", "json", "-v"], {
+    responses: [{ body: '{"one.com":{"name":"one.com"}}' }],
+  });
+
+  assert.equal(result.code, 0);
+  assert.doesNotThrow(() => JSON.parse(result.stdout));
+  assert.match(result.stderr, /transport/);
+});
+
 test("zone list paginates and emits json", async () => {
   const result = await runCli(["zone", "list", "--format", "json"], {
     responses: [
@@ -527,7 +543,8 @@ test("preset remove deletes only records owned by the preset", async () => {
   });
 
   assert.equal(result.code, 0);
-  assert.equal(result.stdout, "✓ preset remove · 1 records affected · ok\n");
+  assert.match(result.stdout, /^✓ preset remove · 1 records affected · ok\n/);
+  assert.match(result.stdout, /TXT · @ · old/);
   assert.equal(result.requests.length, 2);
   assert.match(result.requests[1].args, /delete-record\.json/);
   assert.match(result.requests[1].stdin, /record-id=10/);
