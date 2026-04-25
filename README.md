@@ -6,6 +6,7 @@ DNS operations CLI for [ClouDNS](https://www.cloudns.net/) accounts reached thro
 
 ```bash
 npm install
+npm install -g .   # makes `cloudns` available system-wide
 ```
 
 ## Configure
@@ -51,29 +52,29 @@ In SSH mode, credentials are sent in POST data over SSH stdin and are not placed
 ### Auth check
 
 ```
-$ ./bin/cloudns.js auth check -t direct
+$ cloudns auth check -t direct
 ✓ CloudNS auth check ok
 
-$ ./bin/cloudns.js auth check
+$ cloudns auth check
 ✗ CloudNS auth check failed: transport must be set via --transport or CLOUDNS_TRANSPORT in non-interactive mode
 ```
 
 ### Zone list
 
 ```
-$ ./bin/cloudns.js zone list
+$ cloudns zone list
 ✓ zone list · 2 zones · ok
   - fieldnotes.net
   - fieldnotes.ru
 
-$ ./bin/cloudns.js zone list -f json
+$ cloudns zone list -f json
 {"action":"zone list","status":"ok","recordsAffected":2,"data":[{"name":"fieldnotes.net"},{"name":"fieldnotes.ru"}]}
 ```
 
 ### Record list
 
 ```
-$ ./bin/cloudns.js record list fieldnotes.net
+$ cloudns record list fieldnotes.net
 ✓ record list · 5 records · ok
   - A · @ · 203.0.113.42 · ttl 3600
   - A · www · 203.0.113.42 · ttl 3600
@@ -85,17 +86,17 @@ $ ./bin/cloudns.js record list fieldnotes.net
 ### Record add — idempotent
 
 ```
-$ ./bin/cloudns.js record add fieldnotes.net -T A -N dev -V 203.0.113.55
+$ cloudns record add fieldnotes.net -T A -N dev -V 203.0.113.55
 ✓ record add · 1 records affected · ok
 
-$ ./bin/cloudns.js record add fieldnotes.net -T A -N dev -V 203.0.113.55
+$ cloudns record add fieldnotes.net -T A -N dev -V 203.0.113.55
 skipped record add · 0 records affected · already exists
 ```
 
 ### Preset diff
 
 ```
-$ ./bin/cloudns.js preset diff fieldnotes.net fastmail
+$ cloudns preset diff fieldnotes.net fastmail
 ✓ preset diff · 3 changes · ok
   additions:
   - MX · @ · in1-smtp.messagingengine.com
@@ -106,7 +107,7 @@ $ ./bin/cloudns.js preset diff fieldnotes.net fastmail
 ### Backup
 
 ```
-$ ./bin/cloudns.js backup create fieldnotes.net
+$ cloudns backup create fieldnotes.net
 ✓ backup create · 5 records affected · ok
 wrote backups/fieldnotes.net-20260425T093000.json
 ```
