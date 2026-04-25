@@ -29,10 +29,10 @@ function writeHumanResult(stdout, result) {
     writeList(stdout, result.data, formatRecordLine);
   } else if (result.action === "preset diff") {
     writePresetDiff(stdout, result.data);
-  } else if (isDryRunChangeSet(result) && result.action === "preset apply") {
-    writePresetPlan(stdout, "additions", result.data);
-  } else if (isDryRunChangeSet(result) && result.action === "preset remove") {
-    writePresetPlan(stdout, "removals", result.data);
+  } else if (result.action === "preset apply" && Array.isArray(result.data)) {
+    writePresetPlan(stdout, "additions", result.data, result.status === "ok");
+  } else if (result.action === "preset remove" && Array.isArray(result.data)) {
+    writePresetPlan(stdout, "removals", result.data, result.status === "ok");
   } else if (isDryRunChangeSet(result) && result.action === "backup restore") {
     writeRestorePlan(stdout, result.data);
   } else if (result.action === "backup create" && result.meta?.outputPath) {
@@ -100,22 +100,22 @@ function writePresetDiff(stdout, changes) {
 
   if (additions.length > 0) {
     stdout.write("  additions:\n");
-    writeList(stdout, additions, formatChangeLine);
+    writeList(stdout, additions, formatRecordLine);
   }
   if (removals.length > 0) {
     stdout.write("  removals:\n");
-    writeList(stdout, removals, formatChangeLine);
+    writeList(stdout, removals, formatRecordLine);
   }
 }
 
-function writePresetPlan(stdout, label, changes) {
+function writePresetPlan(stdout, label, changes, hideEmpty = false) {
   if (!Array.isArray(changes) || changes.length === 0) {
-    stdout.write("  (no changes)\n");
+    if (!hideEmpty) stdout.write("  (no changes)\n");
     return;
   }
 
   stdout.write(`  ${label}:\n`);
-  writeList(stdout, changes, formatChangeLine);
+  writeList(stdout, changes, (change) => formatRecordLine(change.record));
 }
 
 function writeRestorePlan(stdout, plan) {
@@ -137,10 +137,6 @@ function writeRestorePlan(stdout, plan) {
     stdout.write("  removals:\n");
     writeList(stdout, plan.removals, formatRecordLine);
   }
-}
-
-function formatChangeLine(change) {
-  return formatRecordLine(change?.record ?? change);
 }
 
 function toJsonResult(result) {
