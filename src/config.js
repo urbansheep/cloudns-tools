@@ -99,6 +99,8 @@ export function parseDotEnv(text) {
   return values;
 }
 
+// Strips matching outer quotes only. Does not handle escape sequences or
+// embedded quotes — use unquoted values for anything that contains quotes.
 function parseValue(rawValue) {
   if (
     rawValue.length >= 2 &&
@@ -213,6 +215,7 @@ async function readLine(stdin) {
   return await new Promise((resolve) => {
     stdin.setEncoding("utf8");
     stdin.once("data", (chunk) => {
+      stdin.pause();
       resolve(String(chunk).trim());
     });
   });

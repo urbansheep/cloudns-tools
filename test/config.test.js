@@ -1,10 +1,27 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after } from "node:test";
 import { ConfigPromptAbortError, loadConfig } from "../src/config.js";
 import { resolveTransport, TransportResolutionError } from "../src/transport/resolve-transport.js";
+
+function makeMockTTYStdin(dataToEmit) {
+  const stdin = new EventEmitter();
+  stdin.isTTY = true;
+  stdin.pauseCount = 0;
+  stdin.setEncoding = () => {};
+  stdin.pause = () => { stdin.pauseCount += 1; };
+  // emit reactively when a data listener is added, so timing works
+  // regardless of how much async work precedes the read
+  stdin.on("newListener", (event) => {
+    if (event === "data") {
+      setImmediate(() => stdin.emit("data", dataToEmit));
+    }
+  });
+  return stdin;
+}
 
 const cleanupPaths = new Set();
 
@@ -246,6 +263,33 @@ test("loadConfig aborts instead of persisting an empty secret when prompting is 
 
   const envText = await readFile(join(cwd, ".env"), "utf8");
   assert.match(envText, /^CLOUDNS_AUTH_PASSWORD=$/m);
+});
+
+test("promptForTransport pauses stdin after reading transport selection", async () => {
+  const stdin = makeMockTTYStdin("1");
+
+  const transport = await resolveTransport({
+    stdin,
+    stdout: { isTTY: true, write() {} },
+  });
+
+  assert.equal(transport, "ssh");
+  assert.equal(stdin.pauseCount, 1);
+});
+
+test("readLine pauses stdin after reading a config value", async () => {
+  const cwd = await writeEnv(["CLOUDNS_TRANSPORT=direct", "CLOUDNS_AUTH_ID=", "CLOUDNS_AUTH_PASSWORD=pw-123"]);
+  const stdin = makeMockTTYStdin("id-456\n");
+
+  const loaded = await loadConfig(cwd, {
+    flags: {},
+    stdin,
+    stdout: { isTTY: true, write() {} },
+  });
+
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.config.cloudnsAuthId, "id-456");
+  assert.equal(stdin.pauseCount, 1);
 });
 
 async function writeEnv(lines) {

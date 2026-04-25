@@ -45,6 +45,7 @@ async function promptForTransport({ stdin, stdout }) {
     const input = stdin;
     input.setEncoding("utf8");
     input.once("data", (chunk) => {
+      input.pause();
       resolve(String(chunk).trim());
     });
   });
