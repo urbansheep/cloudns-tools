@@ -59,6 +59,18 @@ $ cloudns auth check
 ✗ CloudNS auth check failed: transport must be set via --transport or CLOUDNS_TRANSPORT in non-interactive mode
 ```
 
+### Agent discovery
+
+```
+$ cloudns capabilities -f json
+{"ok":true,"command":"capabilities","status":"ok","exitCode":0,"data":{"name":"cloudns-tools",...
+
+$ cloudns doctor -f json
+{"ok":true,"command":"doctor","status":"ok","exitCode":0,"transport":{"mode":"direct","selectedBy":"env"},...
+```
+
+`capabilities` does not require `.env`; it reports the installed command contract for agents. `doctor` is non-mutating and checks local config plus a read-only CloudNS API probe when configuration is complete.
+
 ### Zone list
 
 ```
@@ -112,6 +124,32 @@ $ cloudns preset diff fieldnotes.net fastmail
 $ cloudns backup create fieldnotes.net
 ✓ backup create · 5 records affected · ok
 wrote backups/fieldnotes.net-20260425T093000.json
+```
+
+### Structured API
+
+Agents can call the CLI with JSON instead of shell-style arguments:
+
+```bash
+cloudns api --input request.json
+cloudns api --input - < request.json
+```
+
+Example request:
+
+```json
+{
+  "schemaVersion": 1,
+  "operation": "record.add",
+  "options": { "transport": "direct", "dryRun": true },
+  "target": { "zone": "fieldnotes.net" },
+  "record": {
+    "type": "A",
+    "name": "dev",
+    "value": "203.0.113.55",
+    "ttl": 3600
+  }
+}
 ```
 
 ## Exit Codes

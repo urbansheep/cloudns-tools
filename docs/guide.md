@@ -68,6 +68,53 @@ cloudns auth check -t direct
 
 Runs a read-only zones-list probe through the selected transport. Success exits `0`. Missing config or rejected credentials exit `2`.
 
+## Agent Discovery
+
+```bash
+cloudns capabilities
+cloudns capabilities -f json
+cloudns doctor
+cloudns doctor -f json
+cloudns doctor -f json -v
+```
+
+`capabilities` emits the installed command contract. It does not require `.env`, does not contact ClouDNS, and is intended for agents that need to discover commands, flags, record types, output formats, transports, and exit codes.
+
+`doctor` is non-mutating. It reads `.env` without creating or updating it, checks transport selection and required keys, verifies SSH key path existence in SSH mode, and performs a read-only CloudNS API probe when configuration is complete. With `-f json -v`, `doctor` includes safe `observability.steps` in stdout; secrets are never included.
+
+## Structured API
+
+```bash
+cloudns api --input request.json
+cloudns api --input - < request.json
+```
+
+`api` accepts a JSON request with `schemaVersion: 1` and an `operation` such as `record.add`, `zone.list`, `preset.apply`, `backup.restore`, `capabilities`, or `doctor`. It translates the request into the existing command handlers and wraps the result in an agent envelope.
+
+Example:
+
+```json
+{
+  "schemaVersion": 1,
+  "operation": "record.add",
+  "options": {
+    "transport": "direct",
+    "dryRun": true
+  },
+  "target": {
+    "zone": "example.com"
+  },
+  "record": {
+    "type": "A",
+    "name": "www",
+    "value": "192.0.2.10",
+    "ttl": 3600
+  }
+}
+```
+
+Unknown operations return a stable `unknown_operation` error object with exit code `2`. Mutating operations still honor `dryRun` and destructive operations still require explicit confirmation.
+
 ## Zones
 
 ```bash
