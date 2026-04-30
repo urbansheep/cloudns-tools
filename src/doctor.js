@@ -24,6 +24,7 @@ export async function runDoctorChecks(cwd, { flags = {}, createTransport }) {
       checks,
       errors,
       transport: transport ? { mode: transport, selectedBy } : undefined,
+      includeObservability: flags.verbose,
     });
   }
 
@@ -40,9 +41,10 @@ export async function runDoctorChecks(cwd, { flags = {}, createTransport }) {
       checks,
       errors: [],
       transport: describeTransport(config, selectedBy),
+      includeObservability: flags.verbose,
     });
   } catch (error) {
-    return buildProbeFailure({ error, checks, transport: describeTransport(config, selectedBy) });
+    return buildProbeFailure({ error, checks, transport: describeTransport(config, selectedBy), includeObservability: flags.verbose });
   }
 }
 
@@ -119,7 +121,7 @@ async function checkSshKey({ transport, values, checks, errors }) {
   }
 }
 
-function buildProbeFailure({ error, checks, transport }) {
+function buildProbeFailure({ error, checks, transport, includeObservability }) {
   if (error instanceof CloudnsAuthError) {
     checks.push(fail("api.probe", "CloudNS auth rejected", "Check CLOUDNS_AUTH_ID and CLOUDNS_AUTH_PASSWORD."));
     return buildReport({
@@ -129,6 +131,7 @@ function buildProbeFailure({ error, checks, transport }) {
       checks,
       errors: [authError("cloudns_auth_rejected", "CloudNS auth rejected")],
       transport,
+      includeObservability,
     });
   }
 
@@ -141,6 +144,7 @@ function buildProbeFailure({ error, checks, transport }) {
       checks,
       errors: [apiError("cloudns_api_rejected", "CloudNS API rejected the probe")],
       transport,
+      includeObservability,
     });
   }
 
@@ -153,6 +157,7 @@ function buildProbeFailure({ error, checks, transport }) {
       checks,
       errors: [transportFailure("transport_failed", "transport failed")],
       transport,
+      includeObservability,
     });
   }
 
@@ -164,10 +169,11 @@ function buildProbeFailure({ error, checks, transport }) {
     checks,
     errors: [runtimeError("runtime_error", "runtime error")],
     transport,
+    includeObservability,
   });
 }
 
-function buildReport({ ok, status, exitCode, checks, errors, transport }) {
+function buildReport({ ok, status, exitCode, checks, errors, transport, includeObservability = false }) {
   return {
     ok,
     command: "doctor",
@@ -177,6 +183,15 @@ function buildReport({ ok, status, exitCode, checks, errors, transport }) {
     checks,
     warnings: checks.filter((check) => check.status === "warn"),
     errors,
+    ...(includeObservability ? { observability: { steps: checks.map(checkToStep) } } : {}),
+  };
+}
+
+function checkToStep(check) {
+  return {
+    id: check.id,
+    status: check.status === "pass" ? "ok" : check.status,
+    message: check.message,
   };
 }
 

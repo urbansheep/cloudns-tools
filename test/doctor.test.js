@@ -79,9 +79,44 @@ test("doctor succeeds for direct transport with a read-only API probe", async ()
   assert.match(stdin, /auth-password=auth-password-123/);
 });
 
-async function runDoctor(projectDir, env = {}) {
+test("doctor verbose json includes safe observability steps", async () => {
+  const projectDir = await mkdtemp(join(tmpdir(), "cloudns-doctor-observe-"));
+  cleanupPaths.add(projectDir);
+  const fakeBin = join(projectDir, "bin");
+  await mkdir(fakeBin);
+  await writeFile(
+    join(projectDir, ".env"),
+    [
+      "CLOUDNS_TRANSPORT=direct",
+      "CLOUDNS_AUTH_ID=auth-id-123",
+      "CLOUDNS_AUTH_PASSWORD=auth-password-123",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(
+    join(fakeBin, "curl"),
+    [
+      "#!/bin/sh",
+      "cat >/dev/null",
+      "printf '%s\\n__CLOUDNS_HTTP_STATUS__:%s\\n' '{\"example.com\":{\"zone\":\"example.com\"}}' 200",
+      "",
+    ].join("\n"),
+  );
+  await chmod(join(fakeBin, "curl"), 0o755);
+
+  const result = await runDoctor(projectDir, { PATH: `${fakeBin}:${process.env.PATH ?? ""}` }, ["-v"]);
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+  assert.ok(Array.isArray(parsed.observability.steps));
+  assert.ok(parsed.observability.steps.some((step) => step.id === "api.probe" && step.status === "ok"));
+  assert.doesNotMatch(result.stdout, /auth-password-123/);
+});
+
+async function runDoctor(projectDir, env = {}, extraArgs = []) {
   try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, "doctor", "-f", "json"], {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, "doctor", "-f", "json", ...extraArgs], {
       cwd: projectDir,
       env: { ...process.env, ...env },
       timeout: CLI_TEST_TIMEOUT_MS,
