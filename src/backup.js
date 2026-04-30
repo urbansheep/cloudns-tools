@@ -14,7 +14,7 @@ export async function writeRawBackup(path, contents) {
 
 export async function readJsonBackup(path) {
   const parsed = JSON.parse(await readFile(path, "utf8"));
-  if (!parsed || !Array.isArray(parsed.records)) {
+  if (!parsed || typeof parsed.zone !== "string" || parsed.zone.trim() === "" || !Array.isArray(parsed.records)) {
     throw new BackupError("invalid backup");
   }
   return {

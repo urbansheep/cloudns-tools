@@ -550,6 +550,20 @@ test("backup restore rejects backup files for a different zone", async () => {
   assert.equal(result.requests.length, 0);
 });
 
+test("backup restore rejects backup files without a string zone", async () => {
+  const backup = {
+    zone: null,
+    records: [{ type: "A", name: "@", value: "192.0.2.2", ttl: 3600 }],
+  };
+  const result = await runCli(["backup", "restore", "one.com", "--input", "backup.json", "--confirm"], {
+    files: { "backup.json": JSON.stringify(backup) },
+  });
+
+  assert.equal(result.code, 2);
+  assert.equal(result.stdout, "✗ usage · invalid backup\n");
+  assert.equal(result.requests.length, 0);
+});
+
 test("preset remove dry-run reports preset-owned removals", async () => {
   const result = await runCli(["preset", "remove", "one.com", "fastmail", "--dry-run"], {
     files: {
