@@ -93,10 +93,23 @@ function assignFlag(flags, argv, index, rawName, { inlineValue } = {}) {
   }
 
   const value = inlineValue ?? argv[index + 1];
-  if (value === undefined || value.startsWith("-")) {
+  if (value === undefined || (inlineValue === undefined && isKnownFlagToken(value))) {
     throw new UsageError(`missing value for --${rawName}`);
   }
 
   flags[toCamelCase(rawName)] = value;
   return index + (inlineValue === undefined ? 1 : 0);
+}
+
+function isKnownFlagToken(value) {
+  if (!value.startsWith("-")) {
+    return false;
+  }
+
+  if (value.startsWith("--")) {
+    const [name] = value.slice(2).split("=", 1);
+    return BOOLEAN_FLAGS.has(name) || VALUE_FLAGS.has(name);
+  }
+
+  return SHORT_FLAG_ALIASES.has(value.slice(1));
 }

@@ -38,6 +38,22 @@ test("parseArgs accepts short aliases for common flags", () => {
   assert.equal(parsed.flags.value, "192.0.2.10");
 });
 
+test("parseArgs accepts leading-hyphen values for value flags", () => {
+  const parsed = parseArgs([
+    "record",
+    "add",
+    "example.com",
+    "--type",
+    "TXT",
+    "--name",
+    "@",
+    "--value",
+    "-spf2.0/pra include:example.net -all",
+  ]);
+
+  assert.equal(parsed.flags.value, "-spf2.0/pra include:example.net -all");
+});
+
 test("parseArgs rejects invalid transport values", () => {
   assert.throws(
     () => parseArgs(["auth", "check", "--transport", "vpn"]),
