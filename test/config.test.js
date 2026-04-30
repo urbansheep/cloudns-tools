@@ -112,6 +112,20 @@ test("resolveTransport rejects conflicting CLI and env selectors", async () => {
   );
 });
 
+test("resolveTransport rejects unknown transport selectors", async () => {
+  await assert.rejects(
+    async () =>
+      await resolveTransport({
+        envTransport: "garbage",
+        stdin: { isTTY: false },
+        stdout: { isTTY: false, write() {} },
+      }),
+    (error) =>
+      error instanceof TransportResolutionError &&
+      error.message === 'unknown transport "garbage"; expected "ssh" or "direct"',
+  );
+});
+
 test("resolveTransport fails fast without selector in non-interactive mode", async () => {
   await assert.rejects(
     async () =>

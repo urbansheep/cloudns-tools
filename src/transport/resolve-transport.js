@@ -5,6 +5,8 @@ export class TransportResolutionError extends Error {
   }
 }
 
+const VALID_TRANSPORTS = new Set(["ssh", "direct"]);
+
 export async function resolveTransport({
   cliTransport,
   envTransport,
@@ -13,6 +15,8 @@ export async function resolveTransport({
   promptImpl = promptForTransport,
 } = {}) {
   if (cliTransport && envTransport) {
+    assertValidTransport(cliTransport);
+    assertValidTransport(envTransport);
     if (cliTransport !== envTransport) {
       throw new TransportResolutionError("transport selector conflict between CLI and env");
     }
@@ -21,10 +25,12 @@ export async function resolveTransport({
   }
 
   if (cliTransport) {
+    assertValidTransport(cliTransport);
     return cliTransport;
   }
 
   if (envTransport) {
+    assertValidTransport(envTransport);
     return envTransport;
   }
 
@@ -35,6 +41,12 @@ export async function resolveTransport({
   throw new TransportResolutionError(
     "transport must be set via --transport or CLOUDNS_TRANSPORT in non-interactive mode",
   );
+}
+
+function assertValidTransport(value) {
+  if (!VALID_TRANSPORTS.has(value)) {
+    throw new TransportResolutionError(`unknown transport "${value}"; expected "ssh" or "direct"`);
+  }
 }
 
 async function promptForTransport({ stdin, stdout }) {
