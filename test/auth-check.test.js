@@ -43,7 +43,7 @@ test("successful zones-list probe prints a success status and exits 0", async ()
   const sshArgs = await readFile(result.sshArgsPath, "utf8");
   assert.match(
     sshArgs,
-    /^-i\n\/tmp\/cloudns-test-key\n-o\nBatchMode=yes\n-o\nConnectTimeout=10\n-o\nStrictHostKeyChecking=yes\nops@example-vps\ncurl -sS --connect-timeout 10 --max-time 30 --data-binary @- -w '\\n__CLOUDNS_HTTP_STATUS__:%\{http_code\}' 'https:\/\/api\.cloudns\.net\/dns\/list-zones\.json'\n$/,
+    /^-i\n\/tmp\/cloudns-test-key\n-o\nBatchMode=yes\n-o\nConnectTimeout=10\n-o\nStrictHostKeyChecking=yes\n-l\nops\nexample-vps\ncurl -sS --connect-timeout 10 --max-time 30 --data-binary @- -w '\\n__CLOUDNS_HTTP_STATUS__:%\{http_code\}' 'https:\/\/api\.cloudns\.net\/dns\/list-zones\.json'\n$/,
   );
 
   const stdin = await readFile(result.stdinPath, "utf8");
