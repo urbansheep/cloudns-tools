@@ -16,6 +16,7 @@ import { CloudnsClient, normalizeRecordLike, recordsEquivalent } from "./cloudns
 import { diffPreset, loadPreset, presetOwnedRemovals, PresetError } from "./presets.js";
 import { BackupError, planRestore, readJsonBackup, writeBackup, writeRawBackup } from "./backup.js";
 import { buildCapabilities } from "./capabilities.js";
+import { runDoctorChecks } from "./doctor.js";
 
 const WRITE_DRY_RUN_EXIT = 3;
 const KNOWN_COMMANDS = {
@@ -46,6 +47,10 @@ export async function runCli({ argv, cwd, stdout, stdin, stderr = process.stderr
 
   if (group === "capabilities" && action === undefined && args.length === 0) {
     return runCapabilities({ stdout, flags });
+  }
+
+  if (group === "doctor" && action === undefined && args.length === 0) {
+    return await runDoctor({ cwd, stdout, flags });
   }
 
   if (group === "auth" && action === "check" && args.length === 0) {
@@ -99,6 +104,20 @@ function runCapabilities({ stdout, flags }) {
     stdout.write(`  ${command.argv.join(" ")}\n`);
   }
   return 0;
+}
+
+async function runDoctor({ cwd, stdout, flags }) {
+  const report = await runDoctorChecks(cwd, { flags, createTransport });
+  if (flags.format === "json") {
+    writeJson(stdout, report);
+    return report.exitCode;
+  }
+
+  stdout.write(`${report.ok ? "✓" : "✗"} doctor · ${report.status}\n`);
+  for (const check of report.checks) {
+    stdout.write(`  ${check.status}: ${check.message}\n`);
+  }
+  return report.exitCode;
 }
 
 async function runAuthCheck({ cwd, stdout, stdin, flags, log }) {
