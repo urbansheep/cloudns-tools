@@ -253,7 +253,7 @@ test("record rm requires confirm", async () => {
   assert.equal(result.requests.length, 0);
 });
 
-test("preset diff json emits add/remove objects only", async () => {
+test("preset diff json emits the standard result envelope", async () => {
   const result = await runCli(["preset", "diff", "one.com", "fastmail", "--format", "json"], {
     files: {
       "templates/fastmail.yaml": [
@@ -270,9 +270,12 @@ test("preset diff json emits add/remove objects only", async () => {
   });
 
   assert.equal(result.code, 0);
-  assert.deepEqual(JSON.parse(result.stdout), [
-    { action: "add", type: "MX", name: "@", value: "in1-smtp.messagingengine.com" },
-  ]);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    action: "preset diff",
+    status: "ok",
+    recordsAffected: 1,
+    data: [{ action: "add", type: "MX", name: "@", value: "in1-smtp.messagingengine.com" }],
+  });
 });
 
 test("preset diff with missing preset returns a usage error", async () => {

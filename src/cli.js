@@ -389,10 +389,6 @@ async function runPresetCommand({ action, args, flags, stdout, cwd, client, log 
       value,
     }));
     log(`diff: ${diff.additions.length} additions, ${diff.driftRemovals.length} drift removals`);
-    if (flags.format === "json") {
-      writeJson(stdout, changes);
-      return 0;
-    }
     return finish(stdout, ok("preset diff", changes.length, "ok", changes), flags, 0);
   }
 
