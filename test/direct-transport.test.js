@@ -92,7 +92,10 @@ test("DirectCloudnsTransport surfaces local command failures", async () => {
 
   await assert.rejects(
     async () => await transport.listZones(),
-    (error) => error instanceof DirectTransportError && error.message === "Direct transport failed",
+    (error) =>
+      error instanceof DirectTransportError &&
+      error.message === "Direct transport failed" &&
+      error.stderr === "curl: (7) failed",
   );
 });
 

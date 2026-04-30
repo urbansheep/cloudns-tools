@@ -21,6 +21,9 @@ export class TransportError extends Error {
   constructor(message, options) {
     super(message, options);
     this.name = "TransportError";
+    if (options?.stderr !== undefined) {
+      this.stderr = options.stderr;
+    }
   }
 }
 
