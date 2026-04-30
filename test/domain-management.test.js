@@ -482,6 +482,31 @@ test("backup restore json dry-run plans adds and removes without mutating", asyn
   assert.equal(result.requests.length, 1);
 });
 
+test("backup restore adds missing records before deleting stale records", async () => {
+  const backup = {
+    zone: "one.com",
+    records: [{ type: "A", name: "@", value: "192.0.2.2", ttl: 3600 }],
+  };
+  const result = await runCli(["backup", "restore", "one.com", "--input", "backup.json", "--confirm"], {
+    files: { "backup.json": JSON.stringify(backup) },
+    responses: [
+      {
+        body: '{"10":{"id":"10","type":"A","host":"@","record":"192.0.2.1","ttl":"3600"}}',
+      },
+      { body: '{"status":"Success","data":{"id":"11"}}' },
+      { body: '{"status":"Success"}' },
+    ],
+  });
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "✓ backup restore · 2 records affected · ok\n");
+  assert.equal(result.requests.length, 3);
+  assert.match(result.requests[1].args, /add-record\.json/);
+  assert.match(result.requests[1].stdin, /record=192\.0\.2\.2/);
+  assert.match(result.requests[2].args, /delete-record\.json/);
+  assert.match(result.requests[2].stdin, /record-id=10/);
+});
+
 test("backup restore rejects backup files for a different zone", async () => {
   const backup = {
     zone: "two.com",

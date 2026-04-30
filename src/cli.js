@@ -450,11 +450,11 @@ async function runBackupCommand({ action, args, flags, stdout, cwd, client, log 
       log("dry-run, skipping restore");
       return finish(stdout, skipped("backup restore", affected, "dry-run", plan), flags, WRITE_DRY_RUN_EXIT);
     }
-    for (const record of plan.removals) {
-      await client.deleteRecord(zone, record.id);
-    }
     for (const record of plan.additions) {
       await client.addRecord(zone, record);
+    }
+    for (const record of plan.removals) {
+      await client.deleteRecord(zone, record.id);
     }
     return finish(stdout, ok("backup restore", affected, "ok"), flags, 0);
   }
