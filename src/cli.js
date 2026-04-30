@@ -338,7 +338,22 @@ async function runRecordCommand({ action, args, flags, stdout, client, log }) {
       return finish(stdout, skipped("record rm", 0, "not found"), flags, 0);
     }
     if (matches.length > 1) {
-      stdout.write(`✗ usage · ambiguous record match: ${matches.map((record) => record.id).join(", ")}\n`);
+      const candidateIds = matches.map((record) => record.id);
+      const message = `ambiguous record match: ${candidateIds.join(", ")}`;
+      if (flags.format === "json") {
+        return finish(
+          stdout,
+          {
+            action: "record rm",
+            status: "error",
+            recordsAffected: 0,
+            data: { code: "ambiguous_record_match", message, candidateIds },
+          },
+          flags,
+          2,
+        );
+      }
+      stdout.write(`✗ usage · ${message}\n`);
       return 2;
     }
     if (flags.dryRun) {

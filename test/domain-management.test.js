@@ -219,6 +219,32 @@ test("record rm by ambiguous match exits 2 and prints candidate ids", async () =
   assert.match(result.stdout, /11/);
 });
 
+test("record rm by ambiguous match emits json when requested", async () => {
+  const result = await runCli(
+    ["record", "rm", "one.com", "--type", "TXT", "--name", "@", "--confirm", "--format", "json"],
+    {
+      responses: [
+        {
+          body:
+            '{"10":{"id":"10","type":"TXT","host":"@","record":"one"},"11":{"id":"11","type":"TXT","host":"@","record":"two"}}',
+        },
+      ],
+    },
+  );
+
+  assert.equal(result.code, 2);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    action: "record rm",
+    status: "error",
+    recordsAffected: 0,
+    data: {
+      code: "ambiguous_record_match",
+      message: "ambiguous record match: 10, 11",
+      candidateIds: ["10", "11"],
+    },
+  });
+});
+
 test("record rm requires confirm", async () => {
   const result = await runCli(["record", "rm", "one.com", "--id", "10"]);
 
