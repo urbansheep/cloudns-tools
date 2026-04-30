@@ -15,6 +15,7 @@ import { ok, skipped, writeJson, writeResult } from "./output.js";
 import { CloudnsClient, normalizeRecordLike, recordsEquivalent } from "./cloudns-client.js";
 import { diffPreset, loadPreset, presetOwnedRemovals, PresetError } from "./presets.js";
 import { BackupError, planRestore, readJsonBackup, writeBackup, writeRawBackup } from "./backup.js";
+import { buildCapabilities } from "./capabilities.js";
 
 const WRITE_DRY_RUN_EXIT = 3;
 const KNOWN_COMMANDS = {
@@ -42,6 +43,10 @@ export async function runCli({ argv, cwd, stdout, stdin, stderr = process.stderr
   const [group, action, ...args] = positionals;
 
   const log = makeLog(stderr, flags);
+
+  if (group === "capabilities" && action === undefined && args.length === 0) {
+    return runCapabilities({ stdout, flags });
+  }
 
   if (group === "auth" && action === "check" && args.length === 0) {
     return await runAuthCheck({ cwd, stdout, stdin, flags, log });
@@ -80,6 +85,20 @@ export async function runCli({ argv, cwd, stdout, stdin, stderr = process.stderr
   } catch (error) {
     return handleError(stdout, error);
   }
+}
+
+function runCapabilities({ stdout, flags }) {
+  const capabilities = buildCapabilities();
+  if (flags.format === "json") {
+    writeJson(stdout, capabilities);
+    return 0;
+  }
+
+  stdout.write("cloudns capabilities\n");
+  for (const command of capabilities.data.commands) {
+    stdout.write(`  ${command.argv.join(" ")}\n`);
+  }
+  return 0;
 }
 
 async function runAuthCheck({ cwd, stdout, stdin, flags, log }) {
