@@ -17,6 +17,7 @@ import { diffPreset, loadPreset, presetOwnedRemovals, PresetError } from "./pres
 import { BackupError, planRestore, readJsonBackup, writeBackup, writeRawBackup } from "./backup.js";
 import { buildCapabilities } from "./capabilities.js";
 import { runDoctorChecks } from "./doctor.js";
+import { executeApiRequest, readApiRequest } from "./api.js";
 
 const WRITE_DRY_RUN_EXIT = 3;
 const KNOWN_COMMANDS = {
@@ -51,6 +52,10 @@ export async function runCli({ argv, cwd, stdout, stdin, stderr = process.stderr
 
   if (group === "doctor" && action === undefined && args.length === 0) {
     return await runDoctor({ cwd, stdout, flags });
+  }
+
+  if (group === "api" && action === undefined && args.length === 0) {
+    return await runApi({ cwd, stdin, stdout, stderr, flags });
   }
 
   if (group === "auth" && action === "check" && args.length === 0) {
@@ -117,6 +122,56 @@ async function runDoctor({ cwd, stdout, flags }) {
   for (const check of report.checks) {
     stdout.write(`  ${check.status}: ${check.message}\n`);
   }
+  return report.exitCode;
+}
+
+async function runApi({ cwd, stdin, stdout, stderr, flags }) {
+  if (!flags.input) {
+    return writeApiEnvelope(stdout, {
+      ok: false,
+      command: "api",
+      status: "usage_error",
+      exitCode: 2,
+      warnings: [],
+      errors: [
+        {
+          code: "missing_required_flag",
+          message: "api requires --input",
+          category: "usage",
+          retryable: false,
+          details: { flag: "input" },
+        },
+      ],
+    });
+  }
+
+  let request;
+  try {
+    request = await readApiRequest({ inputPath: flags.input, stdin });
+  } catch {
+    return writeApiEnvelope(stdout, {
+      ok: false,
+      command: "api",
+      status: "usage_error",
+      exitCode: 2,
+      warnings: [],
+      errors: [
+        {
+          code: "invalid_json",
+          message: "api input must be valid JSON",
+          category: "usage",
+          retryable: false,
+        },
+      ],
+    });
+  }
+
+  const report = await executeApiRequest(request, { runCli, cwd, stdin, stderr });
+  return writeApiEnvelope(stdout, report);
+}
+
+function writeApiEnvelope(stdout, report) {
+  writeJson(stdout, report);
   return report.exitCode;
 }
 
