@@ -302,7 +302,7 @@ async function runRecordCommand({ action, args, flags, stdout, client, log }) {
     }
     if (flags.dryRun) {
       log("no match found · dry-run, skipping add");
-      return finish(stdout, skipped("record add", 1, "dry-run"), flags, WRITE_DRY_RUN_EXIT);
+      return finish(stdout, skipped("record add", 0, "dry-run"), flags, WRITE_DRY_RUN_EXIT);
     }
     log("no match found, adding");
     await client.addRecord(zone, record);

@@ -102,7 +102,7 @@ test("api maps record.add dry-run requests to an agent envelope", async () => {
   assert.deepEqual(parsed.data, {
     action: "record add",
     status: "skipped",
-    recordsAffected: 1,
+    recordsAffected: 0,
   });
   assert.deepEqual(parsed.errors, []);
 });
