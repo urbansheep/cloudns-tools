@@ -448,9 +448,12 @@ Existing text output can evolve but should not become less readable.
 
 Existing minimal JSON output should be migrated carefully:
 
-- Phase 1 can add envelope output only to new commands.
+- Phase 1 adds envelope output only to new agent-transparency commands: `capabilities`, `doctor`, and `api`.
+- Existing commands keep their current `-f json` output until a separate compatibility release explicitly migrates them.
 - Phase 2 can add `--format json-v1` or migrate `json` with a release note.
 - Preferred path: migrate `json` in a minor release before publishing widely.
+
+Decision for this implementation pass: preserve existing `-f json` behavior for `auth`, `zone`, `record`, `preset`, and `backup`. New commands may use the shared envelope immediately because they have no legacy consumers.
 
 ## Implementation Phases
 
