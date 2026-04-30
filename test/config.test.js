@@ -192,6 +192,35 @@ test("loadConfig interactively fills missing direct-mode auth fields", async () 
   assert.match(envText, /^CLOUDNS_AUTH_PASSWORD=auth-password-123$/m);
 });
 
+test("loadConfig quotes prompted values that contain dotenv comment markers", async () => {
+  const cwd = await writeEnv(["CLOUDNS_TRANSPORT=direct", "CLOUDNS_AUTH_ID=id-123", "CLOUDNS_AUTH_PASSWORD="]);
+
+  const loaded = await loadConfig(cwd, {
+    flags: {},
+    stdin: { isTTY: true },
+    stdout: { isTTY: true, write() {} },
+    promptValueImpl: async ({ key }) => {
+      assert.equal(key, "CLOUDNS_AUTH_PASSWORD");
+      return "pass # word";
+    },
+  });
+
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.config.cloudnsAuthPassword, "pass # word");
+
+  const envText = await readFile(join(cwd, ".env"), "utf8");
+  assert.match(envText, /^CLOUDNS_AUTH_PASSWORD="pass # word"$/m);
+
+  const reloaded = await loadConfig(cwd, {
+    flags: {},
+    stdin: { isTTY: false },
+    stdout: { isTTY: false, write() {} },
+  });
+
+  assert.equal(reloaded.ok, true);
+  assert.equal(reloaded.config.cloudnsAuthPassword, "pass # word");
+});
+
 test("loadConfig interactively fills missing ssh fields and preserves existing values", async () => {
   const cwd = await writeEnv([
     "CLOUDNS_TRANSPORT=ssh",

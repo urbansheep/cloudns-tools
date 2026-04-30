@@ -99,14 +99,12 @@ export function parseDotEnv(text) {
   return values;
 }
 
-// Strips matching outer quotes only. Does not handle escape sequences or
-// embedded quotes — use unquoted values for anything that contains quotes.
 function parseValue(rawValue) {
-  if (
-    rawValue.length >= 2 &&
-    ((rawValue.startsWith('"') && rawValue.endsWith('"')) ||
-      (rawValue.startsWith("'") && rawValue.endsWith("'")))
-  ) {
+  if (rawValue.length >= 2 && rawValue.startsWith('"') && rawValue.endsWith('"')) {
+    return rawValue.slice(1, -1).replace(/\\(["\\])/g, "$1");
+  }
+
+  if (rawValue.length >= 2 && rawValue.startsWith("'") && rawValue.endsWith("'")) {
     return rawValue.slice(1, -1);
   }
 
@@ -163,7 +161,7 @@ async function readEnvState(cwd) {
 }
 
 function upsertEnvValue(text, key, value) {
-  const line = `${key}=${value}`;
+  const line = `${key}=${formatEnvValue(value)}`;
   const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
   let replaced = false;
 
@@ -187,6 +185,15 @@ function upsertEnvValue(text, key, value) {
   }
 
   return nextLines.join("\n");
+}
+
+function formatEnvValue(value) {
+  const text = String(value);
+  if (!/[\s#='"\\]/.test(text)) {
+    return text;
+  }
+
+  return `"${text.replace(/["\\]/g, "\\$&")}"`;
 }
 
 async function promptForConfigValue({ key, secret, stdin, stdout }) {
