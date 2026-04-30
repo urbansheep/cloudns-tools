@@ -37,6 +37,8 @@ test("capabilities emits a machine-readable command contract without requiring c
   assert.deepEqual(parsed.data.recordTypes, ["A", "AAAA", "MX", "TXT", "CNAME", "NS", "SRV", "CAA"]);
   assert.ok(parsed.data.commands.some((command) => command.name === "record.add" && command.mutates === true));
   assert.ok(parsed.data.commands.some((command) => command.name === "backup.restore" && command.requiresConfirm === true));
+  assert.ok(parsed.data.commands.some((command) => command.name === "doctor" && command.mutates === false));
+  assert.ok(parsed.data.commands.some((command) => command.name === "api" && command.outputs.includes("json")));
   assert.deepEqual(parsed.warnings, []);
   assert.deepEqual(parsed.errors, []);
 });
