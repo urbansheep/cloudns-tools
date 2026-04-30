@@ -235,21 +235,35 @@ async function readSecret(stdin, stdout) {
     stdin.resume?.();
     stdin.setRawMode(true);
 
+    const cleanup = () => {
+      stdin.setRawMode(false);
+      stdin.pause?.();
+      stdin.off("data", onData);
+      stdin.off("end", onEnd);
+      stdin.off("error", onError);
+    };
+
+    const onEnd = () => {
+      cleanup();
+      reject(new ConfigPromptAbortError("stdin closed before input"));
+    };
+
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
+
     const onData = (chunk) => {
       const text = String(chunk);
       for (const char of text) {
         if (char === "\r" || char === "\n") {
-          stdin.setRawMode(false);
-          stdin.pause?.();
-          stdin.off("data", onData);
+          cleanup();
           stdout.write("\n");
           resolve(value.trim());
           return;
         }
         if (char === "\u0003") {
-          stdin.setRawMode(false);
-          stdin.pause?.();
-          stdin.off("data", onData);
+          cleanup();
           reject(new ConfigPromptAbortError("interactive setup canceled"));
           return;
         }
@@ -261,6 +275,8 @@ async function readSecret(stdin, stdout) {
       }
     };
 
+    stdin.once("end", onEnd);
+    stdin.once("error", onError);
     stdin.on("data", onData);
   });
 }

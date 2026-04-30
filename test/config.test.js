@@ -23,6 +23,24 @@ function makeMockTTYStdin(dataToEmit) {
   return stdin;
 }
 
+function makeEndingRawTTYStdin() {
+  const stdin = new EventEmitter();
+  stdin.isTTY = true;
+  stdin.rawModes = [];
+  stdin.setEncoding = () => {};
+  stdin.pause = () => {};
+  stdin.resume = () => {};
+  stdin.setRawMode = (enabled) => {
+    stdin.rawModes.push(enabled);
+  };
+  stdin.on("newListener", (event) => {
+    if (event === "data") {
+      setImmediate(() => stdin.emit("end"));
+    }
+  });
+  return stdin;
+}
+
 const cleanupPaths = new Set();
 
 after(async () => {
@@ -292,6 +310,25 @@ test("loadConfig aborts instead of persisting an empty secret when prompting is 
 
   const envText = await readFile(join(cwd, ".env"), "utf8");
   assert.match(envText, /^CLOUDNS_AUTH_PASSWORD=$/m);
+});
+
+test("readSecret aborts if stdin closes before a newline", async () => {
+  const cwd = await writeEnv(["CLOUDNS_TRANSPORT=direct", "CLOUDNS_AUTH_ID=id-123", "CLOUDNS_AUTH_PASSWORD="]);
+  const stdin = makeEndingRawTTYStdin();
+
+  await assert.rejects(
+    async () =>
+      await Promise.race([
+        loadConfig(cwd, {
+          flags: {},
+          stdin,
+          stdout: { isTTY: true, write() {} },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 50)),
+      ]),
+    (error) => error instanceof ConfigPromptAbortError && error.message === "stdin closed before input",
+  );
+  assert.equal(stdin.rawModes.at(-1), false);
 });
 
 test("promptForTransport pauses stdin after reading transport selection", async () => {
