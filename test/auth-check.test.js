@@ -43,7 +43,7 @@ test("successful zones-list probe prints a success status and exits 0", async ()
   const sshArgs = await readFile(result.sshArgsPath, "utf8");
   assert.match(
     sshArgs,
-    /^-i\n\/tmp\/cloudns-test-key\n-o\nBatchMode=yes\n-o\nConnectTimeout=10\n-o\nStrictHostKeyChecking=yes\n-l\nops\nexample-vps\ncurl -sS --connect-timeout 10 --max-time 30 --data-binary @- -w '\\n__CLOUDNS_HTTP_STATUS__:%\{http_code\}' 'https:\/\/api\.cloudns\.net\/dns\/list-zones\.json'\n$/,
+    /^-i\n\/tmp\/cloudns-test-key\n-o\nBatchMode=yes\n-o\nConnectTimeout=10\n-o\nStrictHostKeyChecking=yes\n-l\nops\nexample-vps\ncurl -sS --connect-timeout 10 --max-time 30 --data-binary @- -w '\\n__CLOUDNS_HTTP_STATUS_[^']+:%\{http_code\}' 'https:\/\/api\.cloudns\.net\/dns\/list-zones\.json'\n$/,
   );
 
   const stdin = await readFile(result.stdinPath, "utf8");
@@ -211,9 +211,12 @@ async function runAuthCheck({
   const responseScript =
     responseBody === undefined
       ? ""
-      : `printf '%s\\n__CLOUDNS_HTTP_STATUS__:%s\\n' ${shellQuote(responseBody)} ${shellQuote(
-          String(httpStatus ?? 200),
-        )}\n`;
+      : [
+          "marker=$(printf '%s\\n' \"$@\" | sed -n \"s/.*__CLOUDNS_HTTP_STATUS_\\([^%]*:\\)%{http_code}.*/__CLOUDNS_HTTP_STATUS_\\1/p\" | head -n 1)",
+          "test -n \"$marker\" || marker='__CLOUDNS_HTTP_STATUS_missing:'",
+          `printf '%s\\n%s%s\\n' ${shellQuote(responseBody)} "$marker" ${shellQuote(String(httpStatus ?? 200))}`,
+          "",
+        ].join("\n");
   const failureScript =
     transportExit === undefined
       ? ""

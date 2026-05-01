@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { DirectCloudnsTransport } from "../src/transport/direct-cloudns.js";
-import { CloudnsApiError, CloudnsAuthError, DirectTransportError } from "../src/transport/cloudns-transport-core.js";
+import {
+  CloudnsApiError,
+  CloudnsAuthError,
+  CURL_STATUS_MARKER,
+  DirectTransportError,
+} from "../src/transport/cloudns-transport-core.js";
 
 test("DirectCloudnsTransport listZones succeeds", async () => {
   const spawnCalls = [];
@@ -13,7 +18,7 @@ test("DirectCloudnsTransport listZones succeeds", async () => {
       [
         {
           code: 0,
-          stdout: '{"example.com":{"zone":"example.com"}}\n__CLOUDNS_HTTP_STATUS__:200',
+          stdout: `{"example.com":{"zone":"example.com"}}\n${CURL_STATUS_MARKER}200`,
         },
       ],
       spawnCalls,
@@ -40,7 +45,7 @@ test("DirectCloudnsTransport maps auth failures", async () => {
     spawnImpl: createSpawnStub([
       {
         code: 0,
-        stdout: '{"status":"Failed","statusDescription":"Authentication failed"}\n__CLOUDNS_HTTP_STATUS__:401',
+        stdout: `{"status":"Failed","statusDescription":"Authentication failed"}\n${CURL_STATUS_MARKER}401`,
       },
     ]),
   });
@@ -58,7 +63,7 @@ test("DirectCloudnsTransport maps api failures", async () => {
     spawnImpl: createSpawnStub([
       {
         code: 0,
-        stdout: '{"status":"Failed","statusDescription":"Unexpected upstream failure"}\n__CLOUDNS_HTTP_STATUS__:500',
+        stdout: `{"status":"Failed","statusDescription":"Unexpected upstream failure"}\n${CURL_STATUS_MARKER}500`,
       },
     ]),
   });

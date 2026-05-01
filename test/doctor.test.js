@@ -57,7 +57,8 @@ test("doctor succeeds for direct transport with a read-only API probe", async ()
     [
       "#!/bin/sh",
       `cat > ${shellQuote(stdinPath)}`,
-      "printf '%s\\n__CLOUDNS_HTTP_STATUS__:%s\\n' '{\"example.com\":{\"zone\":\"example.com\"}}' 200",
+      "marker=$(printf '%s\\n' \"$@\" | sed -n \"s/.*__CLOUDNS_HTTP_STATUS_\\([^%]*:\\)%{http_code}.*/__CLOUDNS_HTTP_STATUS_\\1/p\" | head -n 1)",
+      "printf '%s\\n%s%s\\n' '{\"example.com\":{\"zone\":\"example.com\"}}' \"$marker\" 200",
       "",
     ].join("\n"),
   );
@@ -98,7 +99,8 @@ test("doctor verbose json includes safe observability steps", async () => {
     [
       "#!/bin/sh",
       "cat >/dev/null",
-      "printf '%s\\n__CLOUDNS_HTTP_STATUS__:%s\\n' '{\"example.com\":{\"zone\":\"example.com\"}}' 200",
+      "marker=$(printf '%s\\n' \"$@\" | sed -n \"s/.*__CLOUDNS_HTTP_STATUS_\\([^%]*:\\)%{http_code}.*/__CLOUDNS_HTTP_STATUS_\\1/p\" | head -n 1)",
+      "printf '%s\\n%s%s\\n' '{\"example.com\":{\"zone\":\"example.com\"}}' \"$marker\" 200",
       "",
     ].join("\n"),
   );

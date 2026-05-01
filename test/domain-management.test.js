@@ -742,11 +742,13 @@ function createFakeTransportScript() {
     "const stdin = fs.readFileSync(0, 'utf8');",
     "fs.appendFileSync(requestsPath, JSON.stringify({ args: process.argv.slice(2).join('\\n'), stdin }) + '\\n');",
     "const response = responses.shift() || { body: '{}' };",
+    "const markerArg = process.argv.find((arg) => arg.includes('__CLOUDNS_HTTP_STATUS_')) || '';",
+    "const marker = markerArg.match(/(__CLOUDNS_HTTP_STATUS_[^%]+:)/)?.[1] || '__CLOUDNS_HTTP_STATUS_missing:';",
     "fs.writeFileSync(responsesPath, JSON.stringify(responses));",
     "if (response.exitCode) { if (response.stderr) process.stderr.write(response.stderr); process.exit(response.exitCode); }",
-    "if (response.raw) { process.stdout.write(response.body); process.stdout.write('\\n__CLOUDNS_HTTP_STATUS__:' + (response.httpStatus ?? 200) + '\\n'); process.exit(0); }",
+    "if (response.raw) { process.stdout.write(response.body); process.stdout.write('\\n' + marker + (response.httpStatus ?? 200) + '\\n'); process.exit(0); }",
     "process.stdout.write(response.body);",
-    "process.stdout.write('\\n__CLOUDNS_HTTP_STATUS__:' + (response.httpStatus ?? 200) + '\\n');",
+    "process.stdout.write('\\n' + marker + (response.httpStatus ?? 200) + '\\n');",
     "",
   ].join("\n");
 }

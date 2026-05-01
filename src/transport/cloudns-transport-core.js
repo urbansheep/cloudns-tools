@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
 export const CLOUDNS_API_BASE_URL = "https://api.cloudns.net";
-export const CURL_STATUS_MARKER = "__CLOUDNS_HTTP_STATUS__:";
+export const CLOUDNS_STATUS_MARKER_PREFIX = "__CLOUDNS_HTTP_STATUS_";
+export const CURL_STATUS_MARKER = `${CLOUDNS_STATUS_MARKER_PREFIX}${randomUUID()}:`;
 
 export class CloudnsApiError extends Error {
   constructor(message, options) {

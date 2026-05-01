@@ -62,7 +62,8 @@ test("api maps record.add dry-run requests to an agent envelope", async () => {
     [
       "#!/bin/sh",
       "cat >/dev/null",
-      "printf '%s\\n__CLOUDNS_HTTP_STATUS__:%s\\n' '{}' 200",
+      "marker=$(printf '%s\\n' \"$@\" | sed -n \"s/.*__CLOUDNS_HTTP_STATUS_\\([^%]*:\\)%{http_code}.*/__CLOUDNS_HTTP_STATUS_\\1/p\" | head -n 1)",
+      "printf '%s\\n%s%s\\n' '{}' \"$marker\" 200",
       "",
     ].join("\n"),
   );
