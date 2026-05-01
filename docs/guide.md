@@ -149,7 +149,7 @@ Removing records requires `--confirm`.
 cloudns preset diff example.com fastmail
 cloudns preset diff example.com fastmail -f json
 cloudns preset apply example.com fastmail
-cloudns preset remove example.com fastmail -n
+cloudns preset remove example.com fastmail -y -n
 ```
 
 Preset files live in `templates/`. Apply and remove are idempotent: running the same command twice leaves the zone in the same state. `preset diff --format json` emits objects with `action`, `type`, `name`, and `value`.
