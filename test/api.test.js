@@ -107,6 +107,31 @@ test("api maps record.add dry-run requests to an agent envelope", async () => {
   assert.deepEqual(parsed.errors, []);
 });
 
+test("api rejects backup paths outside the working directory", async () => {
+  const projectDir = await mkdtemp(join(tmpdir(), "cloudns-api-path-"));
+  cleanupPaths.add(projectDir);
+  const result = await runApi(projectDir, {
+    schemaVersion: 1,
+    operation: "backup.create",
+    target: { zone: "example.com" },
+    backup: { output: "../escape.json" },
+  });
+  const parsed = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 2);
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.status, "usage_error");
+  assert.deepEqual(parsed.errors, [
+    {
+      code: "path_outside_cwd",
+      message: "backup output path must stay inside the working directory",
+      category: "usage",
+      retryable: false,
+      details: { path: "../escape.json" },
+    },
+  ]);
+});
+
 async function runApi(projectDir, request, env = {}) {
   const requestPath = join(projectDir, "request.json");
   await writeFile(requestPath, JSON.stringify(request));

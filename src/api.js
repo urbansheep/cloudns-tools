@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { isAbsolute, resolve, relative } from "node:path";
 
 const OPERATION_ARGV = new Map([
   ["auth.check", ["auth", "check"]],
@@ -26,6 +27,10 @@ export async function executeApiRequest(request, { runCli, cwd, stdin, stderr })
   const validationError = validateRequest(request);
   if (validationError) {
     return validationError;
+  }
+  const pathValidationError = validateRequestPaths(request, cwd);
+  if (pathValidationError) {
+    return pathValidationError;
   }
 
   const argv = requestToArgv(request);
@@ -60,6 +65,30 @@ function validateRequest(request) {
     return usageError("unknown_operation", `unknown operation: ${request.operation}`, { operation: request.operation });
   }
   return null;
+}
+
+function validateRequestPaths(request, cwd) {
+  const input = request.backup?.input ?? request.options?.input;
+  const output = request.backup?.output ?? request.options?.output;
+
+  if (input && input !== "-" && !isInsideCwd(cwd, input)) {
+    return usageError("path_outside_cwd", "backup input path must stay inside the working directory", {
+      path: input,
+    });
+  }
+  if (output && !isInsideCwd(cwd, output)) {
+    return usageError("path_outside_cwd", "backup output path must stay inside the working directory", {
+      path: output,
+    });
+  }
+  return null;
+}
+
+function isInsideCwd(cwd, path) {
+  const resolvedCwd = resolve(cwd);
+  const resolvedPath = resolve(cwd, path);
+  const relativePath = relative(resolvedCwd, resolvedPath);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 function requestToArgv(request) {
