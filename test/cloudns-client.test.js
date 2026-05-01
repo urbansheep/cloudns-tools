@@ -32,3 +32,18 @@ test("zoneExists fails hard when zone pagination exceeds the cap", async () => {
       error.message === "CloudNS zone pagination limit exceeded",
   );
 });
+
+test("listRecords rejects non-object record entries", async () => {
+  const client = new CloudnsClient({
+    async request() {
+      return { 10: "not-a-record" };
+    },
+  });
+
+  await assert.rejects(
+    async () => await client.listRecords("one.com"),
+    (error) =>
+      error instanceof CloudnsApiError &&
+      error.message === "CloudNS API returned an invalid record collection",
+  );
+});

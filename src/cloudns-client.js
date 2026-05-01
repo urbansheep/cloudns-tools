@@ -163,11 +163,19 @@ export function normalizeCollection(payload) {
     return payload.data;
   }
   if (payload.data && typeof payload.data === "object") {
-    return Object.entries(payload.data).map(([id, value]) => ({ id, ...value }));
+    return Object.entries(payload.data).map(([id, value]) => normalizeObjectEntry(id, value));
   }
   return Object.entries(payload)
     .filter(([key]) => key !== "status" && key !== "statusDescription")
-    .map(([id, value]) => (value && typeof value === "object" ? { id, ...value } : value));
+    .map(([id, value]) => normalizeObjectEntry(id, value));
+}
+
+function normalizeObjectEntry(id, value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CloudnsApiError("CloudNS API returned an invalid record collection");
+  }
+
+  return { id, ...value };
 }
 
 async function scanZones(transport, { stopWhen } = {}) {
