@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, constants, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseDotEnv, REQUIRED_AUTH_KEYS, REQUIRED_SSH_KEYS } from "./config.js";
 import { CloudnsApiError, CloudnsAuthError, TransportError } from "./transport/cloudns-transport-core.js";
@@ -113,11 +113,11 @@ async function checkSshKey({ transport, values, checks, errors }) {
   }
 
   try {
-    await access(values.VPS_SSH_KEY.trim());
-    checks.push(pass("ssh.key_path", "VPS_SSH_KEY path exists"));
+    await access(values.VPS_SSH_KEY.trim(), constants.R_OK);
+    checks.push(pass("ssh.key_path", "VPS_SSH_KEY path is readable"));
   } catch {
-    checks.push(fail("ssh.key_path", "VPS_SSH_KEY path does not exist", "Set VPS_SSH_KEY to a readable SSH key path."));
-    errors.push(configError("ssh_key_not_found", "VPS_SSH_KEY path does not exist"));
+    checks.push(fail("ssh.key_path", "VPS_SSH_KEY path is not readable", "Set VPS_SSH_KEY to a readable SSH key path."));
+    errors.push(configError("ssh_key_not_found", "VPS_SSH_KEY path is not readable"));
   }
 }
 

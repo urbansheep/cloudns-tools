@@ -114,6 +114,36 @@ test("doctor verbose json includes safe observability steps", async () => {
   assert.doesNotMatch(result.stdout, /auth-password-123/);
 });
 
+test("doctor rejects unreadable SSH key paths before probing", async () => {
+  const projectDir = await mkdtemp(join(tmpdir(), "cloudns-doctor-ssh-key-"));
+  cleanupPaths.add(projectDir);
+  const keyPath = join(projectDir, "id_ed25519");
+  await writeFile(keyPath, "not-a-real-key");
+  await chmod(keyPath, 0o000);
+  await writeFile(
+    join(projectDir, ".env"),
+    [
+      "CLOUDNS_TRANSPORT=ssh",
+      "CLOUDNS_AUTH_ID=auth-id-123",
+      "CLOUDNS_AUTH_PASSWORD=auth-password-123",
+      "VPS_HOST=example-vps",
+      "VPS_USER=ops",
+      `VPS_SSH_KEY=${keyPath}`,
+      "",
+    ].join("\n"),
+  );
+
+  const result = await runDoctor(projectDir);
+  const parsed = JSON.parse(result.stdout);
+
+  await chmod(keyPath, 0o600);
+  assert.equal(result.code, 2);
+  assert.equal(parsed.status, "config_error");
+  assert.ok(parsed.checks.some((check) => check.id === "ssh.key_path" && check.status === "fail"));
+  assert.ok(parsed.errors.some((error) => error.code === "ssh_key_not_found"));
+  assert.ok(!parsed.checks.some((check) => check.id === "api.probe"));
+});
+
 async function runDoctor(projectDir, env = {}, extraArgs = []) {
   try {
     const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, "doctor", "-f", "json", ...extraArgs], {
