@@ -16,7 +16,7 @@ export async function runDoctorChecks(cwd, { flags = {}, createTransport }) {
     await checkSshKey({ transport, values, checks, errors });
   }
 
-  if (errors.length > 0) {
+  if (errors.length > 0 || !transport) {
     return buildReport({
       ok: false,
       status: "config_error",
