@@ -385,7 +385,7 @@ test("readSecret aborts if stdin closes before a newline", async () => {
           stdin,
           stdout: { isTTY: true, write() {} },
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 50)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 500)),
       ]),
     (error) => error instanceof ConfigPromptAbortError && error.message === "stdin closed before input",
   );

@@ -361,6 +361,29 @@ test("preset diff rejects unresolved placeholders in preset records", async () =
   assert.equal(result.requests.length, 0);
 });
 
+test("preset diff rejects CNAME same-name conflicts", async () => {
+  const result = await runCli(["preset", "diff", "one.com", "cdn"], {
+    files: {
+      "templates/cdn.yaml": [
+        "name: cdn",
+        "records:",
+        "  - type: CNAME",
+        "    name: www",
+        "    value: target.example.com",
+        "",
+      ].join("\n"),
+    },
+    responses: [
+      {
+        body: '{"10":{"id":"10","type":"A","host":"www","record":"192.0.2.1","ttl":"3600"}}',
+      },
+    ],
+  });
+
+  assert.equal(result.code, 2);
+  assert.match(result.stdout, /^✗ usage · preset conflict: CNAME www conflicts with existing A record\n$/);
+});
+
 test("preset diff plain output includes grouped changes", async () => {
   const result = await runCli(["preset", "diff", "one.com", "fastmail"], {
     files: {

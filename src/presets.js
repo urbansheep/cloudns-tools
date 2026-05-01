@@ -50,6 +50,13 @@ export async function loadPreset(cwd, name) {
 
 // Diff mode answers: "what must change in the live zone to match this preset?"
 export function diffPreset(presetRecords, liveRecords) {
+  const conflict = findSingletonConflict(presetRecords, liveRecords);
+  if (conflict) {
+    throw new PresetError(
+      `preset conflict: ${conflict.preset.type} ${conflict.preset.name} conflicts with existing ${conflict.live.type} record`,
+    );
+  }
+
   const additions = presetRecords
     .filter((presetRecord) => !liveRecords.some((liveRecord) => recordsEquivalent(liveRecord, presetRecord)))
     .map((record) => ({ action: "add", type: record.type, name: record.name, value: record.value, record }));
@@ -59,6 +66,26 @@ export function diffPreset(presetRecords, liveRecords) {
     .map((record) => ({ action: "remove", type: record.type, name: record.name, value: record.value, record }));
 
   return { additions, driftRemovals };
+}
+
+function findSingletonConflict(presetRecords, liveRecords) {
+  for (const presetRecord of presetRecords) {
+    if (!isSingletonType(presetRecord.type)) {
+      continue;
+    }
+    const liveConflict = liveRecords.find(
+      (liveRecord) => liveRecord.name === presetRecord.name && !recordsEquivalent(liveRecord, presetRecord),
+    );
+    if (liveConflict) {
+      return { preset: presetRecord, live: liveConflict };
+    }
+  }
+
+  return undefined;
+}
+
+function isSingletonType(type) {
+  return type === "CNAME" || type === "NS";
 }
 
 // Remove mode answers: "which live records belong to this preset and should be un-applied?"
