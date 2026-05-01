@@ -419,6 +419,20 @@ test("readLine pauses stdin after reading a config value", async () => {
   assert.equal(stdin.pauseCount, 1);
 });
 
+test("readLine uses only the first line of config input chunks", async () => {
+  const cwd = await writeEnv(["CLOUDNS_TRANSPORT=direct", "CLOUDNS_AUTH_ID=", "CLOUDNS_AUTH_PASSWORD=pw-123"]);
+  const stdin = makeMockTTYStdin("id-456\nextra\n");
+
+  const loaded = await loadConfig(cwd, {
+    flags: {},
+    stdin,
+    stdout: { isTTY: true, write() {} },
+  });
+
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.config.cloudnsAuthId, "id-456");
+});
+
 async function writeEnv(lines) {
   const cwd = await mkdtemp(join(tmpdir(), "cloudns-config-"));
   cleanupPaths.add(cwd);

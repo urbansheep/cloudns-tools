@@ -247,7 +247,7 @@ async function readLine(stdin) {
     stdin.setEncoding("utf8");
     stdin.once("data", (chunk) => {
       stdin.pause();
-      resolve(String(chunk).trim());
+      resolve(String(chunk).split(/\r?\n/)[0].trim());
     });
   });
 }
