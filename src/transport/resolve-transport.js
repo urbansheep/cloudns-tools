@@ -58,7 +58,7 @@ async function promptForTransport({ stdin, stdout }) {
     input.setEncoding("utf8");
     input.once("data", (chunk) => {
       input.pause();
-      resolve(String(chunk).trim());
+      resolve(String(chunk).split(/\r?\n/)[0].trim());
     });
   });
 }

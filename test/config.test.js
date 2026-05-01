@@ -185,6 +185,17 @@ test("resolveTransport prompts in interactive mode", async () => {
   assert.equal(transport, "direct");
 });
 
+test("resolveTransport uses only the first line of prompt input chunks", async () => {
+  const stdin = makeMockTTYStdin("1\nextra\n");
+
+  const transport = await resolveTransport({
+    stdin,
+    stdout: { isTTY: true, write() {} },
+  });
+
+  assert.equal(transport, "ssh");
+});
+
 test("loadConfig creates .env from .env.example and persists prompted transport", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "cloudns-config-"));
   cleanupPaths.add(cwd);
