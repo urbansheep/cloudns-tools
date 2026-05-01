@@ -442,7 +442,7 @@ test("zone list with missing .env returns a useful usage error", async () => {
   const result = await runCli(["zone", "list"], { envText: null });
 
   assert.equal(result.code, 2);
-  assert.match(result.stdout, /^✗ usage · could not read \.env file\n$/);
+  assert.match(result.stdout, /^✗ usage · missing \.env file and \.env\.example bootstrap template\n$/);
   assert.equal(result.requests.length, 0);
 });
 

@@ -16,6 +16,13 @@ export class ConfigPromptAbortError extends Error {
   }
 }
 
+export class ConfigFileError extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = "ConfigFileError";
+  }
+}
+
 export async function loadConfig(cwd, { flags = {}, stdin, stdout, promptImpl, promptValueImpl } = {}) {
   const envState = await readEnvState(cwd);
   let values = parseDotEnv(envState.text);
@@ -112,7 +119,16 @@ function parseValue(rawValue) {
 }
 
 function hasNonEmptyValue(value) {
-  return typeof value === "string" && value.trim() !== "";
+  return typeof value === "string" && value.trim() !== "" && !isPlaceholderValue(value);
+}
+
+function isPlaceholderValue(value) {
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.startsWith("your-") ||
+    normalized.includes("your_") ||
+    (normalized.startsWith("<") && normalized.endsWith(">"))
+  );
 }
 
 function normalizeTransportValue(value) {
@@ -155,7 +171,15 @@ async function readEnvState(cwd) {
   }
 
   const examplePath = join(cwd, ".env.example");
-  const exampleText = await readFile(examplePath, "utf8");
+  let exampleText;
+  try {
+    exampleText = await readFile(examplePath, "utf8");
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+    throw new ConfigFileError("missing .env file and .env.example bootstrap template", { cause: error });
+  }
   await writeFile(envPath, exampleText);
   return { text: exampleText };
 }

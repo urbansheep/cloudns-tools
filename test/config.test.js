@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after } from "node:test";
-import { ConfigPromptAbortError, loadConfig } from "../src/config.js";
+import { ConfigFileError, ConfigPromptAbortError, loadConfig } from "../src/config.js";
 import { resolveTransport, TransportResolutionError } from "../src/transport/resolve-transport.js";
 
 function makeMockTTYStdin(dataToEmit) {
@@ -83,6 +83,42 @@ test("loadConfig requires VPS keys for ssh transport", async () => {
   assert.deepEqual(loaded, {
     ok: false,
     missingKeys: ["VPS_HOST", "VPS_USER", "VPS_SSH_KEY"],
+  });
+});
+
+test("loadConfig reports a clear error when env files are missing", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "cloudns-config-"));
+  cleanupPaths.add(cwd);
+
+  await assert.rejects(
+    async () =>
+      await loadConfig(cwd, {
+        flags: {},
+        stdin: { isTTY: false },
+        stdout: { isTTY: false, write() {} },
+      }),
+    (error) =>
+      error instanceof ConfigFileError &&
+      error.message === "missing .env file and .env.example bootstrap template",
+  );
+});
+
+test("loadConfig treats placeholder-looking values as missing", async () => {
+  const cwd = await writeEnv([
+    "CLOUDNS_TRANSPORT=direct",
+    "CLOUDNS_AUTH_ID=your-id-here",
+    "CLOUDNS_AUTH_PASSWORD=<secret>",
+  ]);
+
+  const loaded = await loadConfig(cwd, {
+    flags: {},
+    stdin: { isTTY: false },
+    stdout: { isTTY: false, write() {} },
+  });
+
+  assert.deepEqual(loaded, {
+    ok: false,
+    missingKeys: ["CLOUDNS_AUTH_ID", "CLOUDNS_AUTH_PASSWORD"],
   });
 });
 

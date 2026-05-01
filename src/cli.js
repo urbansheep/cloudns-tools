@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { ConfigPromptAbortError, loadConfig } from "./config.js";
+import { ConfigFileError, ConfigPromptAbortError, loadConfig } from "./config.js";
 import { SshCloudnsTransport } from "./transport/ssh-cloudns.js";
 import {
   CloudnsApiError,
@@ -180,7 +180,7 @@ async function runAuthCheck({ cwd, stdout, stdin, flags, log }) {
   try {
     loaded = await loadConfig(cwd, { flags, stdin, stdout });
   } catch (error) {
-    if (error instanceof TransportResolutionError || error instanceof ConfigPromptAbortError) {
+    if (error instanceof TransportResolutionError || error instanceof ConfigPromptAbortError || error instanceof ConfigFileError) {
       stdout.write(`✗ CloudNS auth check failed: ${error.message}\n`);
       return 2;
     }
@@ -212,7 +212,7 @@ async function loadClient(cwd, { flags, stdin, stdout, log }) {
   try {
     loaded = await loadConfig(cwd, { flags, stdin, stdout });
   } catch (error) {
-    if (error instanceof TransportResolutionError || error instanceof ConfigPromptAbortError) {
+    if (error instanceof TransportResolutionError || error instanceof ConfigPromptAbortError || error instanceof ConfigFileError) {
       throw new UsageError(error.message);
     }
     throw new UsageError("could not read .env file");
