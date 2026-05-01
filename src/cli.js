@@ -573,7 +573,7 @@ function writeHelp(stdout) {
     "  -y, --confirm\n" +
     "  -v, --verbose\n"
   );
-  return 2;
+  return 0;
 }
 
 function writeUsage(stdout, message) {

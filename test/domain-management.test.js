@@ -27,7 +27,7 @@ test("unknown command fails with usage exit code 2", async () => {
 test("no-argument invocation exits 2", async () => {
   const result = await runCli([]);
 
-  assert.equal(result.code, 2);
+  assert.equal(result.code, 0);
 });
 
 test("zone list -f json -v emits parseable JSON on stdout", async () => {
