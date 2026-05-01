@@ -29,6 +29,7 @@ const KNOWN_COMMANDS = {
 const CONFIRMATION_MESSAGES = new Map([
   ["zone:rm", "zone rm requires --confirm"],
   ["record:rm", "record rm requires --confirm"],
+  ["preset:remove", "preset remove requires --confirm"],
   ["backup:restore", "backup restore requires --confirm"],
 ]);
 const SUPPORTED_RECORD_TYPES = new Set(["A", "AAAA", "MX", "TXT", "CNAME", "NS", "SRV", "CAA"]);

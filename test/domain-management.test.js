@@ -565,7 +565,7 @@ test("backup restore rejects backup files without a string zone", async () => {
 });
 
 test("preset remove dry-run reports preset-owned removals", async () => {
-  const result = await runCli(["preset", "remove", "one.com", "fastmail", "--dry-run"], {
+  const result = await runCli(["preset", "remove", "one.com", "fastmail", "--dry-run", "--confirm"], {
     files: {
       "templates/fastmail.yaml": [
         "name: fastmail",
@@ -589,8 +589,16 @@ test("preset remove dry-run reports preset-owned removals", async () => {
   assert.match(result.stdout, /removals:\n  - TXT · @ · old · ttl 3600/);
 });
 
+test("preset remove requires confirm", async () => {
+  const result = await runCli(["preset", "remove", "one.com", "fastmail"]);
+
+  assert.equal(result.code, 2);
+  assert.match(result.stdout, /^✗ usage · preset remove requires --confirm\n$/);
+  assert.equal(result.requests.length, 0);
+});
+
 test("preset remove deletes only records owned by the preset", async () => {
-  const result = await runCli(["preset", "remove", "one.com", "fastmail"], {
+  const result = await runCli(["preset", "remove", "one.com", "fastmail", "--confirm"], {
     files: {
       "templates/fastmail.yaml": [
         "name: fastmail",
@@ -620,7 +628,7 @@ test("preset remove deletes only records owned by the preset", async () => {
 });
 
 test("preset remove with no matching preset records makes no deletions", async () => {
-  const result = await runCli(["preset", "remove", "one.com", "fastmail"], {
+  const result = await runCli(["preset", "remove", "one.com", "fastmail", "--confirm"], {
     files: {
       "templates/fastmail.yaml": [
         "name: fastmail",

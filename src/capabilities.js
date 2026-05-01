@@ -191,10 +191,10 @@ export const COMMANDS = [
     mutates: true,
     idempotent: true,
     supportsDryRun: true,
-    requiresConfirm: false,
+    requiresConfirm: true,
     requiredArgs: ["zone", "preset"],
-    requiredFlags: [],
-    optionalFlags: ["transport", "format", "dry-run", "verbose"],
+    requiredFlags: ["confirm"],
+    optionalFlags: ["transport", "format", "dry-run", "confirm", "verbose"],
     outputs: ["text", "json"],
   },
   {
