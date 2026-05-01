@@ -1,15 +1,27 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { normalizeRecordLike, recordsEquivalent } from "./cloudns-client.js";
 
-export async function writeBackup(path, backup) {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(backup, null, 2));
+const DEFAULT_FS = { mkdir, writeFile, rename, rm };
+
+export async function writeBackup(path, backup, fs = DEFAULT_FS) {
+  await atomicWriteFile(path, JSON.stringify(backup, null, 2), fs);
 }
 
-export async function writeRawBackup(path, contents) {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, contents);
+export async function writeRawBackup(path, contents, fs = DEFAULT_FS) {
+  await atomicWriteFile(path, contents, fs);
+}
+
+async function atomicWriteFile(path, contents, fs) {
+  const tmpPath = `${path}.tmp`;
+  await fs.mkdir(dirname(path), { recursive: true });
+  try {
+    await fs.writeFile(tmpPath, contents);
+    await fs.rename(tmpPath, path);
+  } catch (error) {
+    await fs.rm(tmpPath, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 export async function readJsonBackup(path) {
