@@ -172,6 +172,14 @@ test("record add sends record-type, host, record, and ttl", async () => {
   assert.match(result.requests[1].stdin, /ttl=3600/);
 });
 
+test("record add rejects invalid numeric flags before transport calls", async () => {
+  const result = await runCli(["record", "add", "one.com", "--type", "A", "--name", "www", "--value", "192.0.2.2", "--ttl", "abc"]);
+
+  assert.equal(result.code, 2);
+  assert.equal(result.stdout, "✗ usage · ttl must be a non-negative integer\n");
+  assert.equal(result.requests.length, 0);
+});
+
 test("record add accepts short aliases for transport and record flags", async () => {
   const result = await runCli(
     ["record", "add", "one.com", "-t", "ssh", "-T", "A", "-N", "www", "-V", "192.0.2.2"],

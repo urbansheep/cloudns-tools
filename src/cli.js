@@ -479,13 +479,25 @@ function recordFromFlags(flags) {
     type: flags.type,
     name: flags.name ?? "@",
     value: flags.value,
-    ttl: flags.ttl ?? 3600,
-    priority: flags.priority,
-    weight: flags.weight,
-    port: flags.port,
-    caaFlag: flags.caaFlag,
+    ttl: parseIntegerFlag(flags.ttl ?? 3600, "ttl"),
+    priority: parseOptionalIntegerFlag(flags.priority, "priority"),
+    weight: parseOptionalIntegerFlag(flags.weight, "weight"),
+    port: parseOptionalIntegerFlag(flags.port, "port"),
+    caaFlag: parseOptionalIntegerFlag(flags.caaFlag, "caa-flag"),
     caaType: flags.caaType,
   });
+}
+
+function parseOptionalIntegerFlag(value, label) {
+  return value === undefined ? undefined : parseIntegerFlag(value, label);
+}
+
+function parseIntegerFlag(value, label) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 0) {
+    throw new UsageError(`${label} must be a non-negative integer`);
+  }
+  return number;
 }
 
 function validateRecord(record) {
