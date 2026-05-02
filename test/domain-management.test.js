@@ -286,6 +286,25 @@ test("preset diff json emits the standard result envelope", async () => {
   });
 });
 
+test("preset diff accepts case-insensitive preset metadata names", async () => {
+  const result = await runCli(["preset", "diff", "one.com", "FastMail"], {
+    files: {
+      "templates/FastMail.yaml": [
+        "name: fastmail",
+        "records:",
+        "  - type: TXT",
+        "    name: '@'",
+        "    value: ok",
+        "",
+      ].join("\n"),
+    },
+    responses: [{ body: "{}" }],
+  });
+
+  assert.equal(result.code, 0);
+  assert.match(result.stdout, /^✓ preset diff · 1 changes · ok\n/);
+});
+
 test("preset diff with missing preset returns a usage error", async () => {
   const result = await runCli(["preset", "diff", "one.com", "missing"]);
 

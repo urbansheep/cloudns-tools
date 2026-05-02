@@ -28,7 +28,7 @@ export async function loadPreset(cwd, name) {
   } catch (error) {
     throw new PresetError(`preset ${name} contains invalid YAML: ${error.message}`);
   }
-  if (!parsed || parsed.name !== name || !Array.isArray(parsed.records)) {
+  if (!parsed || !samePresetName(parsed.name, name) || !Array.isArray(parsed.records)) {
     throw new PresetError(`invalid preset ${name}`);
   }
   if (parsed.agent_hints?.safe_to_apply === false) {
@@ -46,6 +46,10 @@ export async function loadPreset(cwd, name) {
   }
 
   return { name, description: parsed.description ?? "", records };
+}
+
+function samePresetName(left, right) {
+  return typeof left === "string" && left.toLowerCase() === right.toLowerCase();
 }
 
 // Diff mode answers: "what must change in the live zone to match this preset?"
