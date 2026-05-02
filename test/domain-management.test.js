@@ -510,6 +510,14 @@ test("backup create honors absolute output paths", async () => {
   assert.deepEqual(backup.records, [{ id: "10", type: "A", name: "@", value: "192.0.2.1", ttl: 3600 }]);
 });
 
+test("backup create rejects unsafe zone names for default output paths", async () => {
+  const result = await runCli(["backup", "create", "../escape"]);
+
+  assert.equal(result.code, 2);
+  assert.match(result.stdout, /^✗ usage · invalid zone name for backup path: \.\.\/escape\n$/);
+  assert.equal(result.requests.length, 0);
+});
+
 test("backup restore json dry-run plans adds and removes without mutating", async () => {
   const backup = {
     zone: "one.com",

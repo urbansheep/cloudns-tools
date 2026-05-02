@@ -594,6 +594,9 @@ function getConfirmationMessage(group, action, flags) {
 }
 
 function defaultBackupName(zone, format) {
+  if (zone.includes("/") || zone.includes("\\") || zone.includes("..")) {
+    throw new UsageError(`invalid zone name for backup path: ${zone}`);
+  }
   const suffix = format === "bind" ? "zone" : "json";
   const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
   return `backups/${zone}-${stamp}.${suffix}`;
