@@ -3,6 +3,7 @@ import { CloudnsApiError } from "./transport/ssh-cloudns.js";
 const PAGE_SIZE = 100;
 const DEFAULT_TTL = 3600;
 const MAX_ZONE_PAGES = 200;
+const MAX_RECORD_PAGES = 500;
 
 export class CloudnsClient {
   constructor(transport) {
@@ -32,7 +33,7 @@ export class CloudnsClient {
 
   async listRecords(zone, filters = {}) {
     const records = [];
-    for (let page = 1; ; page += 1) {
+    for (let page = 1; page <= MAX_RECORD_PAGES; page += 1) {
       const payload = await this.transport.request("/dns/records.json", {
         "domain-name": zone,
         page,
@@ -44,14 +45,14 @@ export class CloudnsClient {
       });
       const pageRecords = normalizeCollection(payload).map(normalizeRecord);
       if (pageRecords.length === 0) {
-        break;
+        return records;
       }
       records.push(...pageRecords);
       if (pageRecords.length < PAGE_SIZE) {
-        break;
+        return records;
       }
     }
-    return records;
+    throw new CloudnsApiError("CloudNS record pagination limit exceeded");
   }
 
   async addRecord(zone, record) {

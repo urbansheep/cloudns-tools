@@ -47,3 +47,26 @@ test("listRecords rejects non-object record entries", async () => {
       error.message === "CloudNS API returned an invalid record collection",
   );
 });
+
+test("listRecords fails hard when record pagination exceeds the cap", async () => {
+  let calls = 0;
+  const page = Object.fromEntries(
+    Array.from({ length: 100 }, (_, index) => [
+      String(index),
+      { type: "A", host: `host-${index}`, record: "192.0.2.1", ttl: "3600" },
+    ]),
+  );
+  const client = new CloudnsClient({
+    async request() {
+      calls += 1;
+      return calls <= 501 ? page : {};
+    },
+  });
+
+  await assert.rejects(
+    async () => await client.listRecords("one.com"),
+    (error) =>
+      error instanceof CloudnsApiError &&
+      error.message === "CloudNS record pagination limit exceeded",
+  );
+});
