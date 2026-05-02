@@ -83,6 +83,62 @@ export class BaseCloudnsTransport {
   }
 }
 
+export function runChildProcess({ spawnImpl, command, args, stdin, timeoutMs = 45000, ErrorClass, timeoutMessage, failureMessage }) {
+  return new Promise((resolve, reject) => {
+    const child = spawnImpl(command, args, {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      child.kill("SIGKILL");
+      reject(new ErrorClass(timeoutMessage, { stderr }));
+    }, timeoutMs);
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.stdin.end(stdin ?? undefined);
+
+    child.on("error", (error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+      reject(new ErrorClass(failureMessage, { cause: error, stderr }));
+    });
+
+    child.on("close", (code) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+      if (code === 0) {
+        resolve(stdout);
+        return;
+      }
+
+      reject(new ErrorClass(failureMessage, { cause: new Error(`exit ${code}`), stderr }));
+    });
+  });
+}
+
 export function parseRawCloudnsResponse(stdout) {
   const parsed = splitResponse(stdout);
   if (parsed.httpStatus >= 400) {
