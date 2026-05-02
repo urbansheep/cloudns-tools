@@ -599,9 +599,9 @@ function defaultBackupName(zone, format) {
   return `backups/${zone}-${stamp}.${suffix}`;
 }
 
-function makeLog(stdout, flags) {
+function makeLog(stream, flags) {
   if (!flags.verbose) return () => {};
-  return (message) => stdout.write(`· ${message}\n`);
+  return (message) => stream.write(`· ${message}\n`);
 }
 
 function logConfig(log, config, flags) {
