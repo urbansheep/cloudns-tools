@@ -41,6 +41,24 @@ function makeEndingRawTTYStdin() {
   return stdin;
 }
 
+function makeRawTTYStdin(dataToEmit) {
+  const stdin = new EventEmitter();
+  stdin.isTTY = true;
+  stdin.rawModes = [];
+  stdin.setEncoding = () => {};
+  stdin.pause = () => {};
+  stdin.resume = () => {};
+  stdin.setRawMode = (enabled) => {
+    stdin.rawModes.push(enabled);
+  };
+  stdin.on("newListener", (event) => {
+    if (event === "data") {
+      setImmediate(() => stdin.emit("data", dataToEmit));
+    }
+  });
+  return stdin;
+}
+
 const cleanupPaths = new Set();
 
 after(async () => {
@@ -388,6 +406,25 @@ test("readSecret aborts if stdin closes before a newline", async () => {
         new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 500)),
       ]),
     (error) => error instanceof ConfigPromptAbortError && error.message === "stdin closed before input",
+  );
+  assert.equal(stdin.rawModes.at(-1), false);
+});
+
+test("readSecret aborts on Ctrl-D", async () => {
+  const cwd = await writeEnv(["CLOUDNS_TRANSPORT=direct", "CLOUDNS_AUTH_ID=id-123", "CLOUDNS_AUTH_PASSWORD="]);
+  const stdin = makeRawTTYStdin("\u0004");
+
+  await assert.rejects(
+    async () =>
+      await Promise.race([
+        loadConfig(cwd, {
+          flags: {},
+          stdin,
+          stdout: { isTTY: true, write() {} },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 500)),
+      ]),
+    (error) => error instanceof ConfigPromptAbortError && error.message === "interactive setup canceled",
   );
   assert.equal(stdin.rawModes.at(-1), false);
 });

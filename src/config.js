@@ -286,7 +286,7 @@ async function readSecret(stdin, stdout) {
           resolve(value.trim());
           return;
         }
-        if (char === "\u0003") {
+        if (char === "\u0003" || char === "\u0004") {
           cleanup();
           reject(new ConfigPromptAbortError("interactive setup canceled"));
           return;
